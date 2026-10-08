@@ -48,6 +48,17 @@ for (const dir of apps) {
     try { execFileSync(rcodesign, ['sign', app], { stdio: 'inherit' }); }
     catch { console.warn('  ! rcodesign not found: the app is NOT signed and will not open on Apple Silicon until signed (see README).'); }
   }
+  if (process.platform === 'darwin') {
+    // Drag-to-install disk image with an Applications shortcut.
+    const dmgDir = path.join(dir, 'dmg');
+    rmSync(dmgDir, { recursive: true, force: true });
+    mkdirSync(dmgDir);
+    execFileSync('ditto', [app, path.join(dmgDir, 'Azuria Finance.app')]);
+    execFileSync('ln', ['-s', '/Applications', path.join(dmgDir, 'Applications')]);
+    const dmg = path.join(out, `Azuria-Finance-${pkg.version}-mac-${arch}.dmg`);
+    execFileSync('hdiutil', ['create', '-volname', 'Azuria Finance', '-srcfolder', dmgDir, '-ov', '-format', 'UDZO', dmg], { stdio: 'inherit' });
+    console.log('  ✓', path.relative(root, dmg));
+  }
   const zip = path.join(out, `Azuria-Finance-${pkg.version}-mac-${arch}.zip`);
   // -y keeps the framework symlinks intact, which macOS requires.
   execFileSync('zip', ['-qry', zip, 'Azuria Finance.app'], { cwd: dir });

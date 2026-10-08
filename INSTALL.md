@@ -7,14 +7,14 @@ Each device keeps its own encrypted copy of your data. To move data between devi
 
 ## MacBook — download the app
 
-**1. Pick the right download.** Apple menu → *About This Mac*:
+**1. Download.** Go to **github.com/azuriaengine26/azuria-finance/releases** and pick the file for your Mac (Apple menu → *About This Mac*):
 
 | It says | Download |
 |---|---|
-| Chip: Apple M1 / M2 / M3 / M4 | `Azuria-Finance-1.1.0-mac-apple-silicon.zip` |
-| Processor: Intel | `Azuria-Finance-1.1.0-mac-intel.zip` |
+| Chip: Apple M1 / M2 / M3 / M4 | `Azuria-Finance-…-mac-apple-silicon.dmg` |
+| Processor: Intel | `Azuria-Finance-…-mac-intel.dmg` |
 
-**2. Unzip and move it.** Double-click the zip. Drag **Azuria Finance** into your **Applications** folder.
+**2. Install.** Open the `.dmg` and drag **Azuria Finance** onto the **Applications** folder shown next to it.
 
 **3. Open it the first time.** Double-click Azuria Finance. macOS will say it can't verify the developer — click **Done**.
 
@@ -34,16 +34,13 @@ Why the extra step: Apple only skips it for apps signed with a paid Apple Develo
 
 Apple doesn't allow installing iPhone apps from a downloaded file, so the iPhone version comes either from a web address you add to your Home Screen, or from Xcode on your Mac.
 
-### Option A — Home Screen app (recommended, free, 5 minutes)
+### Option A — Home Screen app (recommended, free, 2 minutes)
 
-The app files need to live at a private HTTPS address. Your data never goes there — only the app itself. Easiest host:
+1. On your iPhone, open **Safari** and go to **azuriaengine26.github.io/azuria-finance**
+2. Tap **Share** → **Add to Home Screen** → **Add**.
+3. Open Azuria Finance from the Home Screen, set your PIN, and restore your encrypted backup from the Mac if you want the same data.
 
-1. On your Mac, go to **app.netlify.com** and sign up (free; "Sign up with GitHub" works).
-2. Choose **Add new site → Deploy manually**.
-3. Drag the **`dist`** folder (inside `azuria-finance.zip`) onto the page. Netlify gives you an address like `https://something.netlify.app`.
-4. On your iPhone, open that address in **Safari**.
-5. Tap **Share** → **Add to Home Screen** → **Add**.
-6. Open Azuria Finance from the Home Screen, set your PIN, and restore your encrypted backup from the Mac if you want the same data.
+Only the app's files live at that address. Your financial data stays encrypted on the iPhone and is never uploaded.
 
 ### Option B — Native iPhone app through Xcode
 
@@ -58,7 +55,7 @@ With a free Apple ID the app must be re-installed every 7 days; with a paid Appl
 
 ## Mac in the browser (no install)
 
-Open the same Netlify address in Safari on the Mac → **File → Add to Dock**.
+Open **azuriaengine26.github.io/azuria-finance** in Safari on the Mac → **File → Add to Dock**.
 
 ## First steps after installing
 

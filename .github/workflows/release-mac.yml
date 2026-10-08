@@ -1,0 +1,39 @@
+name: Build Mac app
+
+# Runs on GitHub's macOS machines: tests, builds Azuria Finance.app for Apple Silicon and Intel,
+# packages each as a .dmg, and publishes them as a release you can download.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  mac:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Build, sign (ad-hoc) and package
+        run: npm run build:mac
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if [ "${GITHUB_REF_TYPE}" != "tag" ]; then TAG="v$(node -p "require('./package.json').version")"; fi
+          NOTES="Mac app downloads.
+
+          - Apple Silicon (M1–M4): the file ending in mac-apple-silicon.dmg
+          - Intel Macs: the file ending in mac-intel.dmg
+
+          Open the .dmg, drag Azuria Finance into Applications, open it once, then System Settings → Privacy & Security → Open Anyway. Step-by-step: INSTALL.md."
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Azuria Finance ${TAG#v}" --notes "$NOTES"
+          gh release upload "$TAG" release/*.dmg release/*.zip --clobber
