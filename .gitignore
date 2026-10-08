@@ -9,3 +9,4 @@ dist-single/
 ios/App/App/public/
 ios/App/Pods/
 ios/DerivedData/
+artifact.html

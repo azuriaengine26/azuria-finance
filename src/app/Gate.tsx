@@ -120,6 +120,7 @@ export function Onboarding({ onUnlock }: { onUnlock: (u: Unlocked) => void }) {
             <li>Nothing is sent to any server. No bank passwords are ever asked for.</li>
             <li>Import bank statements (CSV, Excel, OFX) whenever you like.</li>
           </ul>
+          {import.meta.env.MODE === 'single' && <p style={{ fontSize: 13.5, border: '1px solid #2a3c5c', borderRadius: 10, padding: '10px 12px' }}>Viewing this inside Claude? It’s a live preview: everything works except file downloads (exports and backups), which the preview window blocks. For your real finances, use your installed copy so you can make backups.</p>}
           <button className="btn primary" onClick={() => setStep('pin')}>Set up</button>
         </>)}
         {step === 'pin' && (<>
