@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dist-single/
+.env
+.env.*
+*.azfin
+*.local
+.DS_Store
+ios/App/App/public/
+ios/App/Pods/
+ios/DerivedData/

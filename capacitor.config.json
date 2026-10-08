@@ -1,0 +1,7 @@
+{
+  "appId": "com.azuriaengine.finance",
+  "appName": "Azuria Finance",
+  "webDir": "dist",
+  "ios": { "contentInset": "never", "backgroundColor": "#14233a", "limitsNavigationsToAppBoundDomains": true },
+  "server": { "iosScheme": "capacitor" }
+}
