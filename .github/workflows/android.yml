@@ -39,8 +39,7 @@ jobs:
           else
             echo "ok=true" >> "$GITHUB_OUTPUT"
           fi
-      - name: Build signed APK
-        if: steps.check.outputs.ok == 'true'
+      - name: Build APK (signed when the password secret is set; otherwise an unsigned test build)
         working-directory: android
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
