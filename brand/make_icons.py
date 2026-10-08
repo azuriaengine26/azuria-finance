@@ -47,3 +47,39 @@ os.makedirs('electron', exist_ok=True)
 icns('electron/icon.icns')
 square(512, rounded=True, margin=0.1, logo_width=0.84).save('electron/icon.png')
 print('icons done')
+
+# ---------- Android ----------
+res = 'android/app/src/main/res'
+if os.path.isdir(res):
+    BGHEX = '#260E0D'
+    dens = {'mdpi': 1, 'hdpi': 1.5, 'xhdpi': 2, 'xxhdpi': 3, 'xxxhdpi': 4}
+    for d, k in dens.items():
+        folder = f'{res}/mipmap-{d}'
+        os.makedirs(folder, exist_ok=True)
+        legacy = int(48 * k)
+        opaque(square(legacy, logo_width=0.86)).save(f'{folder}/ic_launcher.png')
+        # round legacy icon
+        r = square(legacy * 4, logo_width=0.80).convert('RGBA')
+        m = Image.new('L', r.size, 0); ImageDraw.Draw(m).ellipse([0, 0, r.size[0] - 1, r.size[1] - 1], fill=255); r.putalpha(m)
+        r.resize((legacy, legacy), Image.LANCZOS).save(f'{folder}/ic_launcher_round.png')
+        # adaptive foreground: 108dp canvas, logo inside the 66dp safe circle, transparent around it
+        fg = int(108 * k)
+        canvas = Image.new('RGBA', (fg * 4, fg * 4), (0, 0, 0, 0))
+        lw = int(fg * 4 * 0.58); lh = round(logo.height * lw / logo.width)
+        tl = Image.open('src/assets/azuria-logo.png').convert('RGBA')  # transparent-background logo
+        lh = round(tl.height * lw / tl.width)
+        canvas.paste(tl.resize((lw, lh), Image.LANCZOS), ((fg * 4 - lw) // 2, (fg * 4 - lh) // 2), tl.resize((lw, lh), Image.LANCZOS))
+        canvas.resize((fg, fg), Image.LANCZOS).save(f'{folder}/ic_launcher_foreground.png')
+    open(f'{res}/values/ic_launcher_background.xml', 'w').write(f'<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">{BGHEX}</color>\n</resources>\n')
+    # launch screens: espresso with the logo centred
+    for folder in os.listdir(res):
+        p = f'{res}/{folder}/splash.png'
+        if os.path.exists(p):
+            w, h = Image.open(p).size
+            s = Image.new('RGB', (w, h), BG)
+            tl = Image.open('src/assets/azuria-logo.png').convert('RGBA')
+            lw = int(min(w, h) * 0.55); lh = round(tl.height * lw / tl.width)
+            t = tl.resize((lw, lh), Image.LANCZOS)
+            s.paste(t, ((w - lw) // 2, (h - lh) // 2), t)
+            s.save(p)
+    print('android icons done')

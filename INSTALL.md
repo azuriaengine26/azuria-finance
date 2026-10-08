@@ -53,6 +53,18 @@ With a free Apple ID the app must be re-installed every 7 days; with a paid Appl
 
 ---
 
+## Samsung Galaxy / Android — install the APK
+
+1. On the phone, open **github.com/azuriaengine26/azuria-finance/releases** in Chrome or Samsung Internet.
+2. Under the newest release, tap **Assets**, then `Azuria-Finance-…-android.apk`. Confirm the download.
+3. Open the downloaded file (notification or **My Files → Downloads**).
+4. The first time, Android asks to allow installs from your browser: tap **Settings**, turn on **Allow from this source**, go back, tap **Install**.
+5. If **Google Play Protect** says the app is unrecognised, tap **More details → Install anyway** (it isn't from the Play Store, so Play Protect doesn't know it yet).
+6. Open **Azuria Finance**, set your PIN, and restore an encrypted backup if you want your data from another device.
+
+Exports and backups open Android's share sheet: choose **Save to Drive**, **My Files**, or send by email.
+Updates: install the newer APK the same way — your data stays, because every version is signed with the same key.
+
 ## Mac in the browser (no install)
 
 Open **azuriaengine26.github.io/azuria-finance** in Safari on the Mac → **File → Add to Dock**.

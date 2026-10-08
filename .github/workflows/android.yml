@@ -1,0 +1,64 @@
+name: Build Android app
+
+# Builds the signed Android APK (Samsung Galaxy and other Android phones) and publishes it to the release.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - run: npm test
+      - name: Build the web app and copy it into the Android project
+        run: npx vite build && npx cap sync android
+      - name: Check the signing password is set
+        id: check
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_PASSWORD" ]; then
+            echo "::warning::APK not built yet: add the repository secret ANDROID_KEYSTORE_PASSWORD (Settings → Secrets and variables → Actions), then run this workflow again."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Build signed APK
+        if: steps.check.outputs.ok == 'true'
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: chmod +x gradlew && ./gradlew --no-daemon assembleRelease
+      - name: Verify signature
+        if: steps.check.outputs.ok == 'true'
+        run: |
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          "$APKSIGNER" verify --verbose --print-certs "$APK" | tee signature.txt
+          grep -q "CN=Azuria Finance" signature.txt
+          VERSION=$(node -p "require('./package.json').version")
+          mkdir -p out && cp "$APK" "out/Azuria-Finance-$VERSION-android.apk"
+      - name: Publish release
+        if: steps.check.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v$(node -p "require('./package.json').version")"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Azuria Finance ${TAG#v}" --notes "Downloads for Android (APK) and Mac. Install steps: INSTALL.md."
+          gh release upload "$TAG" out/*.apk --clobber

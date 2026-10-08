@@ -2,6 +2,15 @@
   "appId": "com.azuriaengine.finance",
   "appName": "Azuria Finance",
   "webDir": "dist",
-  "ios": { "contentInset": "never", "backgroundColor": "#14233a", "limitsNavigationsToAppBoundDomains": true },
-  "server": { "iosScheme": "capacitor" }
+  "backgroundColor": "#260e0d",
+  "ios": { "contentInset": "never", "backgroundColor": "#260e0d", "limitsNavigationsToAppBoundDomains": true },
+  "android": {
+    "backgroundColor": "#260e0d",
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "SystemBars": { "style": "DARK", "insetsHandling": "css", "initialViewportFitValueHint": "cover" }
+  }
 }

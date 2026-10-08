@@ -4,6 +4,7 @@ import { useApp } from '../app/context';
 import { formatMoney, parseMoney, toDecimalString, currencyInfo, CURRENCIES } from '../core/money';
 import type { Scope } from '../core/types';
 import { Icon } from './icons';
+import { isNative, saveFileNative } from '../app/native';
 
 // ---------- Money ----------
 export function useSecondary(): string | null {
@@ -241,6 +242,15 @@ function viewerDownloads(): Promise<any> {
  */
 export async function download(filename: string, data: BlobPart, type = 'text/plain'): Promise<boolean> {
   const blob = new Blob([data], { type });
+  if (isNative()) {
+    try {
+      const ok = await saveFileNative(filename, blob);
+      return ok;
+    } catch (e: any) {
+      window.dispatchEvent(new CustomEvent(DOWNLOAD_EVENT, { detail: { ok: false, filename, message: `Couldn’t share ${filename}: ${e?.message ?? e}` } }));
+      return false;
+    }
+  }
   const cap = await viewerDownloads();
   if (cap) {
     try {

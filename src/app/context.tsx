@@ -6,6 +6,7 @@ import { Vault } from '../core/vault';
 import { getSetting, setSetting } from '../core/seed';
 import { generateRecurring } from '../core/repo';
 import { today } from '../core/dates';
+import { setSystemBarsForTheme } from './native';
 
 export interface Toast { msg: string; tone?: 'ok' | 'bad'; action?: { label: string; run: () => void } }
 
@@ -121,6 +122,7 @@ export function AppProvider({ db, vault, onLock, children }: { db: Db; vault: Va
     const t = getSetting(db, 'theme', 'dark');
     if (t === 'system') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', t);
+    setSystemBarsForTheme(t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches));
   }, [db, version]);
 
   const fin = useMemo(() => new Finance(db, day), [db, version, day]);

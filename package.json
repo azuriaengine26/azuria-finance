@@ -1,7 +1,7 @@
 {
   "name": "azuria-finance",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,8 +13,12 @@
     "build:mac": "node scripts/build-mac.mjs"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/app": "^8.1.2",
     "@capacitor/core": "^8.5.3",
+    "@capacitor/filesystem": "^8.1.4",
     "@capacitor/ios": "^8.5.3",
+    "@capacitor/share": "^8.0.3",
     "@fontsource/ibm-plex-sans": "^5.3.0",
     "@fontsource/ibm-plex-sans-condensed": "^5.3.0",
     "exceljs": "^4.4.0",
