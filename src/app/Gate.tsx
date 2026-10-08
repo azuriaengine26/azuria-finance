@@ -6,6 +6,8 @@ import { loadDemoData } from '../core/demo';
 import { generateRecurring } from '../core/repo';
 import { restoreJSON } from '../core/backup';
 import logo from '../assets/azuria-logo.png';
+import { biometricStatus, unlockWithBiometric, disableBiometric, biometricErrorMessage } from './biometric';
+import { Icon } from '../ui/icons';
 
 export type Unlocked = { db: Db; vault: Vault };
 
@@ -26,31 +28,66 @@ export function LockScreen({ onUnlock, onReset }: { onUnlock: (u: Unlocked) => v
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const [wait, setWait] = useState(lockoutRemaining());
+  const [bio, setBio] = useState(false);
   useEffect(() => { if (wait <= 0) return; const t = setInterval(() => setWait(lockoutRemaining()), 1000); return () => clearInterval(t); }, [wait > 0]);
+
+  const open = async (secret: string) => {
+    const { vault, data } = await Vault.unlock(secret);
+    const db = await openDb(data);
+    vault.dailySnapshot(db.export()).catch(() => {});
+    onUnlock({ db, vault });
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true); setErr('');
-    try {
-      const { vault, data } = await Vault.unlock(pin);
-      const db = await openDb(data);
-      vault.dailySnapshot(db.export()).catch(() => {});
-      onUnlock({ db, vault });
-    } catch (e: any) {
+    try { await open(pin); }
+    catch (e: any) {
       setErr(e instanceof WrongPinError ? 'That PIN didn’t unlock your data. Try again.' : e.message);
       setWait(lockoutRemaining());
       setPin('');
     } finally { setBusy(false); }
   };
+
+  const fingerprint = async () => {
+    setErr('');
+    let secret: string;
+    try { secret = await unlockWithBiometric(); }
+    catch (e: any) {
+      const msg = biometricErrorMessage(e);
+      if (msg) setErr(msg);
+      if (e?.code === 'KEY_INVALIDATED' || e?.code === 'NOT_ENROLLED') setBio(false);
+      return;
+    }
+    setBusy(true);
+    try { await open(secret); }
+    catch (e: any) {
+      if (e instanceof WrongPinError) {
+        // The stored PIN no longer matches (PIN changed elsewhere): switch fingerprint unlock off.
+        await disableBiometric(); setBio(false);
+        setErr('Your PIN changed, so fingerprint unlock was turned off. Enter your PIN, then turn it on again in Settings → Security.');
+      } else setErr(e.message);
+    } finally { setBusy(false); }
+  };
+
+  // Offer the fingerprint prompt straight away when it's set up.
+  useEffect(() => {
+    let alive = true;
+    biometricStatus().then((s) => { if (alive && s.enrolled) { setBio(true); if (lockoutRemaining() <= 0) fingerprint(); } });
+    return () => { alive = false; };
+  }, []);
+
   return (
     <div className="gate">
       <form className="gate-card" onSubmit={submit}>
         <BrandMark />
         <h1>Unlock</h1>
-        <p>Your data is encrypted on this device. Enter your PIN or passcode.</p>
-        <input className="input" type="password" autoComplete="current-password" inputMode="text" autoFocus value={pin} onChange={(e) => setPin(e.target.value)} aria-label="PIN or passcode" disabled={busy || wait > 0} />
+        <p>{bio ? 'Use your fingerprint, or enter your PIN.' : 'Your data is encrypted on this device. Enter your PIN or passcode.'}</p>
+        {bio && <button type="button" className="btn primary" onClick={fingerprint} disabled={busy}><Icon name="fingerprint" />Unlock with fingerprint</button>}
+        <input className="input" type="password" autoComplete="current-password" inputMode="text" autoFocus={!bio} value={pin} onChange={(e) => setPin(e.target.value)} aria-label="PIN or passcode" placeholder="PIN" disabled={busy || wait > 0} />
         {err && <div className="err" role="alert">{err}</div>}
         {wait > 0 && <div className="err">Too many attempts — wait {Math.ceil(wait / 1000)}s.</div>}
-        <button className="btn primary" disabled={busy || !pin || wait > 0}>{busy ? 'Decrypting…' : 'Unlock'}</button>
+        <button className={`btn ${bio ? '' : 'primary'}`} disabled={busy || !pin || wait > 0}>{busy ? 'Decrypting…' : 'Unlock with PIN'}</button>
         <button type="button" className="btn" onClick={onReset}>Forgot PIN?</button>
       </form>
     </div>

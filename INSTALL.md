@@ -62,6 +62,8 @@ With a free Apple ID the app must be re-installed every 7 days; with a paid Appl
 5. If **Google Play Protect** says the app is unrecognised, tap **More details → Install anyway** (it isn't from the Play Store, so Play Protect doesn't know it yet).
 6. Open **Azuria Finance**, set your PIN, and restore an encrypted backup if you want your data from another device.
 
+**Fingerprint unlock:** Settings → Security → Fingerprint unlock → **Turn on**, enter your PIN, then touch the sensor. Your PIN is locked in the phone's security chip and only released by your fingerprint. (Samsung's face unlock can't protect app keys, so the fingerprint sensor is used.) If you add or remove fingerprints on the phone, the app turns this off for safety and asks for your PIN once.
+
 Exports and backups open Android's share sheet: choose **Save to Drive**, **My Files**, or send by email.
 Updates: install the newer APK the same way — your data stays, because every version is signed with the same key.
 

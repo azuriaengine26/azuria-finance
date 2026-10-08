@@ -4,7 +4,8 @@ import { PageHead, Panel, Field, Text, Select, Check, Segmented, Modal, Confirm,
 import { saveRate, saveCategory, deleteCategory, restoreTransaction, purgeTransaction } from '../core/repo';
 import { exportJSON, restoreJSON, validateBackup, transactionsCSV, deleteDemoData, hasDemoData, TABLES } from '../core/backup';
 import { loadDemoData } from '../core/demo';
-import { Vault, validatePin, KDF_ITERATIONS } from '../core/vault';
+import { Vault, validatePin, KDF_ITERATIONS, WrongPinError } from '../core/vault';
+import { biometricStatus, enrollBiometric, disableBiometric, biometricErrorMessage, type BiometricStatus } from '../app/biometric';
 import { Db } from '../core/db';
 import { today, formatDate } from '../core/dates';
 import { formatMoney, CURRENCIES } from '../core/money';
@@ -90,12 +91,34 @@ function Security() {
   const [p2, setP2] = useState('');
   const [current, setCurrent] = useState('');
   const [busy, setBusy] = useState(false);
+  const [bio, setBio] = useState<BiometricStatus>({ available: false, enrolled: false, reason: 'checking' });
+  const [bioPin, setBioPin] = useState<string | null>(null);
+  useEffect(() => { biometricStatus().then(setBio); }, []);
+  const turnOnBio = async () => {
+    if (!bioPin) return;
+    setBusy(true);
+    try {
+      await Vault.unlock(bioPin); // confirms the PIN before it is stored behind the fingerprint
+      await enrollBiometric(bioPin);
+      setBioPin(null);
+      setBio(await biometricStatus());
+      toast('Fingerprint unlock is on');
+    } catch (e: any) {
+      if (e?.code !== 'CANCELLED') toast({ msg: e instanceof WrongPinError ? 'That PIN isn’t right.' : biometricErrorMessage(e) ?? e.message, tone: 'bad' });
+    } finally { setBusy(false); }
+  };
+  const turnOffBio = async () => { await disableBiometric(); setBio(await biometricStatus()); toast('Fingerprint unlock is off'); };
   const change = async () => {
     setBusy(true);
     try {
       await Vault.unlock(current); // verifies the current PIN
       await vault.changePin(p1, db.export());
-      toast('PIN changed. Older encrypted backup files still need the old PIN.');
+      if (bio.enrolled) {
+        // Fingerprint unlock stores the PIN, so it has to be re-confirmed with the new one.
+        try { await enrollBiometric(p1); toast('PIN changed. Fingerprint unlock now uses the new PIN. Older encrypted backup files still need the old PIN.'); }
+        catch { await disableBiometric(); toast({ msg: 'PIN changed. Fingerprint unlock was turned off — turn it on again below.', tone: 'bad' }); }
+        setBio(await biometricStatus());
+      } else toast('PIN changed. Older encrypted backup files still need the old PIN.');
       setShow(false); setP1(''); setP2(''); setCurrent('');
     } catch (e: any) { toast({ msg: e.message, tone: 'bad' }); } finally { setBusy(false); }
   };
@@ -105,7 +128,28 @@ function Security() {
         <div className="notice"><Icon name="lock" /><span>All data — including receipts — is stored encrypted on this device with AES-256-GCM. The key comes from your PIN through PBKDF2-SHA256 ({KDF_ITERATIONS.toLocaleString()} rounds) and exists only in memory while unlocked. Nothing is sent to any server, and there is no PIN recovery.</span></div>
         <Field label="Lock automatically after"><Select value={setting('auto_lock_minutes', '5')} onChange={(v) => updateSetting('auto_lock_minutes', v ?? '5')} options={[['1', '1 minute'], ['2', '2 minutes'], ['5', '5 minutes'], ['15', '15 minutes'], ['30', '30 minutes'], ['0', 'Never (not recommended)']].map(([v, l]) => ({ value: v, label: l }))} /></Field>
         <div className="row wrap"><button className="btn" onClick={() => setShow(true)}>Change PIN</button><button className="btn" onClick={() => lock()}><Icon name="lock" />Lock now</button></div>
-        <p className="small muted">Face ID / Touch ID: Safari web apps can’t securely gate local encryption keys behind Face ID, so the web version uses your PIN. The native iPhone build (see README) is where Face ID unlock belongs; it’s not enabled in this version rather than faking it.</p>
+        <div className="panel" style={{ background: 'var(--surface-2)' }}>
+          <div className="spread" style={{ alignItems: 'flex-start' }}>
+            <div className="grow">
+              <h3 className="row" style={{ gap: 8 }}><Icon name="fingerprint" size={20} />Fingerprint unlock</h3>
+              <p className="small muted" style={{ marginTop: 4 }}>
+                {bio.enrolled ? 'On. Your PIN is locked inside this phone’s security chip and only released by your fingerprint.'
+                  : bio.available ? 'Unlock with your fingerprint instead of typing your PIN. Your PIN is stored in this phone’s security chip and only released after a fingerprint scan.'
+                  : bio.reason === 'none_enrolled' ? 'Add a fingerprint in your phone’s Settings → Security and privacy → Biometrics first.'
+                  : bio.reason === 'checking' ? 'Checking…'
+                  : 'Available in the Android app on phones with a fingerprint sensor. Face ID for iPhone and Touch ID for Mac are not in this version yet.'}
+              </p>
+            </div>
+            {bio.enrolled ? <button className="btn" onClick={turnOffBio}>Turn off</button>
+              : bio.available ? <button className="btn primary" onClick={() => setBioPin('')}>Turn on</button> : null}
+          </div>
+          {bioPin !== null && !bio.enrolled && (
+            <div className="stack" style={{ marginTop: 12 }}>
+              <Field label="Enter your PIN to confirm"><input className="input" type="password" autoComplete="current-password" value={bioPin} onChange={(e) => setBioPin(e.target.value)} /></Field>
+              <div className="row"><button className="btn" onClick={() => setBioPin(null)}>Cancel</button><button className="btn primary" disabled={busy || !bioPin} onClick={turnOnBio}>{busy ? 'Waiting for fingerprint…' : 'Continue'}</button></div>
+            </div>
+          )}
+        </div>
       </div>
       {show && <Modal title="Change PIN" onClose={() => setShow(false)} footer={<><button className="btn" onClick={() => setShow(false)}>Cancel</button><button className="btn primary" disabled={busy || !current || !p1 || p1 !== p2 || !!validatePin(p1)} onClick={change}>{busy ? 'Re-encrypting…' : 'Change PIN'}</button></>}>
         <div className="stack">
