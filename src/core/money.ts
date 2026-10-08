@@ -46,6 +46,8 @@ export function parseMoney(input: string | number, decimals = 2): number {
 
 /** Minor units -> plain decimal string "1234.56" (for inputs and CSV). */
 export function toDecimalString(minor: number, decimals = 2): string {
+  if (!Number.isFinite(minor)) minor = 0;
+  if (!Number.isInteger(minor)) minor = Math.round(minor); // display safety: stored money is always whole minor units
   const neg = minor < 0;
   const abs = BigInt(Math.abs(minor));
   const base = 10n ** BigInt(decimals);

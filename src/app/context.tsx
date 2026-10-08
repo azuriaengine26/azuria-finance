@@ -63,6 +63,12 @@ export function AppProvider({ db, vault, onLock, children }: { db: Db; vault: Va
     timer.current = window.setTimeout(flush, 350);
   }), [db, flush]);
 
+  // Lets the Mac app wait for the final save before quitting.
+  useEffect(() => {
+    (window as any).__azFlush = () => (timer.current ? flush() : saving.current);
+    return () => { delete (window as any).__azFlush; };
+  }, [flush]);
+
   // Save immediately when the app is hidden (switching apps, closing the lid).
   useEffect(() => {
     const onHide = () => { if (document.visibilityState === 'hidden' && timer.current) flush(); };
@@ -101,9 +107,18 @@ export function AppProvider({ db, vault, onLock, children }: { db: Db; vault: Va
     return () => window.clearTimeout(t);
   }, [toastState]);
 
+  useEffect(() => {
+    const on = (e: Event) => {
+      const d = (e as CustomEvent).detail;
+      setToast(d.ok ? { msg: `Saved ${d.filename}` } : { msg: d.message, tone: 'bad' });
+    };
+    window.addEventListener('az-download-status', on);
+    return () => window.removeEventListener('az-download-status', on);
+  }, []);
+
   // Theme
   useEffect(() => {
-    const t = getSetting(db, 'theme', 'system');
+    const t = getSetting(db, 'theme', 'dark');
     if (t === 'system') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', t);
   }, [db, version]);

@@ -5,7 +5,7 @@ import { TRANSFER_TYPES, isLiabilityType } from '../core/types';
 import { saveTransaction, deleteTransaction, duplicateTransaction, getTags, txHistory, inferTransferType, restoreTransaction } from '../core/repo';
 import { formatMoney } from '../core/money';
 import { today, formatDate } from '../core/dates';
-import { Modal, Field, Text, Area, DateInput, Select, MoneyInput, Segmented, Check, Chip } from './components';
+import { Modal, Field, Text, Area, DateInput, Select, MoneyInput, Segmented, Check, Chip, download } from './components';
 import { Icon } from './icons';
 
 export function accountOptions(accounts: Account[], includeId?: number | null) {
@@ -100,12 +100,15 @@ export function TxForm({ tx, initial, onClose }: { tx?: Transaction | null; init
     onClose();
   };
 
+  const [preview, setPreview] = useState<{ id: number; url: string } | null>(null);
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview.url); }, [preview]);
   const openAttachment = (id: number) => {
-    const r = db.get<any>('SELECT data, mime FROM attachments WHERE id = ?', [id]);
+    const r = db.get<any>('SELECT data, mime, filename FROM attachments WHERE id = ?', [id]);
     if (!r) return;
-    const url = URL.createObjectURL(new Blob([r.data], { type: r.mime }));
-    window.open(url, '_blank');
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    if (String(r.mime).startsWith('image/')) {
+      if (preview?.id === id) { setPreview(null); return; }
+      setPreview({ id, url: URL.createObjectURL(new Blob([r.data], { type: r.mime })) });
+    } else download(r.filename, r.data, r.mime);
   };
 
   const transferInfo = TRANSFER_TYPES.find((t) => t.value === d.transfer_type);
@@ -180,6 +183,7 @@ export function TxForm({ tx, initial, onClose }: { tx?: Transaction | null; init
                   <button className="btn ghost sm danger" onClick={() => act(() => db.run('DELETE FROM attachments WHERE id = ?', [a.id]), 'Attachment removed')}>Remove</button>
                 </div>
               ))}
+              {preview && <img src={preview.url} alt="Receipt preview" style={{ maxWidth: '100%', borderRadius: 10, border: '1px solid var(--line)' }} />}
               {pending.map((f) => <div key={f.name} className="small muted">Will attach: {f.name}</div>)}
               <label className="btn sm" style={{ alignSelf: 'flex-start' }}><Icon name="paperclip" />Attach file or photo<input type="file" accept="image/*,application/pdf" multiple hidden onChange={(e) => setPending([...pending, ...Array.from(e.target.files ?? [])])} /></label>
               <small className="muted">Files are stored encrypted with your data. Photos are resized to save space.</small>

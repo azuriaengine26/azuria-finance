@@ -110,7 +110,7 @@ function Planner({ debts }: { debts: any[] }) {
   if (!eligible.length) return <Panel title="Payoff planner"><p className="muted small">Add debts with a minimum payment to compare payoff strategies.</p></Panel>;
   const when = (m: number | null) => (m == null ? 'Not within 50 years' : `${monthLabel(monthKey(addMonths(fin.ref, m)))} (${m} mo)`);
   const rows = [
-    { key: 'avalanche', name: 'Avalanche — highest interest first', r: results.avalanche, color: 'var(--azure)' },
+    { key: 'avalanche', name: 'Avalanche — highest interest first', r: results.avalanche, color: 'var(--accent)' },
     { key: 'snowball', name: 'Snowball — smallest balance first', r: results.snowball, color: 'var(--income)' },
     { key: 'minimum', name: 'Minimum payments only', r: results.minimum, color: 'var(--spend)' },
   ];

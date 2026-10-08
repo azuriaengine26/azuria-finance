@@ -1,5 +1,7 @@
 # Azuria Finance
 
+Branded with the Azuria logo palette: espresso `#260E0D`, bronze `#705942`, gold `#F2DD9F` (dark theme by default, ivory light theme in Settings). Icons for every platform are generated from `brand/azuria-logo-original.png` by `brand/make_icons.py`.
+
 Private personal + business finance for one owner (built for Emma / Azuria Engine).
 Personal and business money are kept completely separate, with a combined view one tap away.
 Everything runs **on your device**, encrypted with your PIN. There is no server, no account, no tracking.
@@ -61,6 +63,16 @@ npm run build:single # whole app in ONE file -> dist-single/index.html
 ```
 
 The app needs a secure context for encryption: `https://…` or `http://localhost`.
+
+## Downloadable Mac app
+
+`npm run build:mac` builds **Azuria Finance.app** for Apple Silicon and Intel (Electron), signs it, and zips it into `release/`.
+The desktop shell (`electron/main.cjs`) serves the app from inside the bundle over a private `app://` scheme, gives the page no
+Node.js access, blocks every outbound network request, refuses camera/microphone/location, opens normal save dialogs for exports,
+and waits for the final encrypted save before quitting. Data lives in `~/Library/Application Support/Azuria Finance`.
+
+Signing: built on Linux it is ad-hoc signed with `rcodesign`; built on a Mac it uses `codesign` (set `APPLE_SIGN_IDENTITY` to a
+Developer ID certificate to sign properly, then notarize with `xcrun notarytool`). Step-by-step installation is in **INSTALL.md**.
 
 ## Install on iPhone
 

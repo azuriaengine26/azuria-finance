@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, Children, isValidElement, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../app/context';
 import { formatMoney, parseMoney, toDecimalString, currencyInfo, CURRENCIES } from '../core/money';
@@ -101,7 +101,7 @@ export function OwnerChip({ owner }: { owner: string }) {
 }
 
 export function CatDot({ name, color }: { name?: string | null; color?: string | null }) {
-  return <span className="dot" style={{ background: color ?? '#94a3b8' }} aria-hidden="true">{(name ?? '?').slice(0, 1).toUpperCase()}</span>;
+  return <span className="dot" style={{ background: color ?? '#9a8a78' }} aria-hidden="true">{(name ?? '?').slice(0, 1).toUpperCase()}</span>;
 }
 
 // ---------- Modal ----------
@@ -137,8 +137,26 @@ export function Confirm({ title, children, confirmLabel, danger, onConfirm, onCl
 }
 
 // ---------- Form fields ----------
-export function Field({ label, hint, children, full }: { label: string; hint?: ReactNode; children: ReactNode; full?: boolean }) {
+let fieldSeq = 0;
+/**
+ * Form field. A single input is wrapped in a <label>. Fields holding button groups (Segmented) render as a
+ * labelled group instead: on iPhone Safari a tap on a button inside a <label> can be re-routed to the
+ * label's first button, which made Personal/Business switches snap back.
+ */
+export function Field({ label, hint, children, full, group }: { label: string; hint?: ReactNode; children: ReactNode; full?: boolean; group?: boolean }) {
+  const [id] = useState(() => `fld-${++fieldSeq}`);
+  const isGroup = group || containsSegmented(children);
+  if (isGroup) return <div className={`field ${full ? 'full' : ''}`} role="group" aria-labelledby={id}><span id={id}>{label}</span>{children}{hint && <small>{hint}</small>}</div>;
   return <label className={`field ${full ? 'full' : ''}`}><span>{label}</span>{children}{hint && <small>{hint}</small>}</label>;
+}
+function containsSegmented(node: ReactNode): boolean {
+  let found = false;
+  Children.forEach(node, (c) => {
+    if (found || !isValidElement(c)) return;
+    if (c.type === Segmented) found = true;
+    else if ((c.props as any)?.children) found = containsSegmented((c.props as any).children);
+  });
+  return found;
 }
 
 export function Text({ value, onChange, ...rest }: { value: string | null | undefined; onChange: (v: string) => void } & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'>) {
@@ -206,13 +224,40 @@ export function useDraft<T extends object>(initial: T) {
   return [draft, patch, setDraft] as const;
 }
 
-export function download(filename: string, data: BlobPart, type = 'text/plain') {
+/** Raised so the app shell can show download problems as a toast. */
+export const DOWNLOAD_EVENT = 'az-download-status';
+
+let downloadsCap: Promise<any> | null = null;
+function viewerDownloads(): Promise<any> {
+  // Inside the Claude artifact viewer, files must be offered through its "downloads" capability.
+  const c = (window as any).claude;
+  if (!c?.use) return Promise.resolve(null);
+  return (downloadsCap ??= c.use('downloads').catch(() => null));
+}
+
+/**
+ * Save a generated file. In a browser or the Mac app this triggers a normal download / save dialog;
+ * inside the Claude preview it asks the viewer to confirm the save.
+ */
+export async function download(filename: string, data: BlobPart, type = 'text/plain'): Promise<boolean> {
   const blob = new Blob([data], { type });
+  const cap = await viewerDownloads();
+  if (cap) {
+    try {
+      await cap.save({ filename, data: blob });
+      window.dispatchEvent(new CustomEvent(DOWNLOAD_EVENT, { detail: { ok: true, filename } }));
+      return true;
+    } catch (e: any) {
+      if (e?.code !== 'declined') window.dispatchEvent(new CustomEvent(DOWNLOAD_EVENT, { detail: { ok: false, filename, message: e?.message || 'This file could not be saved here.' } }));
+      return false;
+    }
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = filename;
   document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  return true;
 }
 
 export function readFile(file: File, as: 'text' | 'buffer'): Promise<any> {

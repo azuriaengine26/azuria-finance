@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../app/context';
-import { PageHead, Panel, Empty, Modal, Field, Select, MoneyInput, CurrencySelect, Segmented, Progress, Chip, Check, useDraft } from '../ui/components';
+import { PageHead, Panel, Empty, Modal, Field, Select, MoneyInput, CurrencySelect, Segmented, Progress, Chip, Check, Stat, useDraft } from '../ui/components';
 import { categoryOptions } from '../ui/TxForm';
 import { addMonths, monthKey, monthLabel, monthEnd } from '../core/dates';
 import { formatMoney } from '../core/money';
@@ -8,33 +8,49 @@ import type { Budget, Owner } from '../core/types';
 import { Icon } from '../ui/icons';
 
 function BudgetForm({ b, month, onClose }: { b: Partial<Budget>; month: string; onClose: () => void }) {
-  const { db, fin, act } = useApp();
+  const { db, fin, act, scope } = useApp();
   const [d, p] = useDraft<Partial<Budget>>(b);
+  const editingDefault = !!d.id && !b.month;
   const [onlyThisMonth, setOnly] = useState(!!b.month);
+  const lockedOwner = scope !== 'all';
+  const owner = (lockedOwner ? scope : d.owner ?? 'personal') as Owner;
   const save = () => {
-    if (!d.amount && d.amount !== 0) return act(() => { throw new Error('Enter a budget amount'); });
-    const data = { owner: d.owner, category_id: d.category_id ?? null, amount: d.amount, currency: d.currency ?? fin.base, month: onlyThisMonth ? month : null };
     const ok = act(() => {
-      if (d.id) db.update('budgets', d.id, data);
-      else {
-        const exists = db.value('SELECT id FROM budgets WHERE owner = ? AND ifnull(category_id,0) = ? AND ifnull(month,\'\') = ?', [data.owner!, data.category_id ?? 0, data.month ?? '']);
-        if (exists) throw new Error('A budget for this category already exists — edit it instead.');
+      if (d.amount == null || d.amount <= 0) throw new Error('Enter a monthly amount greater than zero');
+      const data = { owner, category_id: d.category_id ?? null, amount: d.amount, currency: d.currency ?? fin.base, month: onlyThisMonth ? month : null };
+      // Changing "every month" to "only this month" adds a one-month change and keeps the regular budget.
+      const asOverride = editingDefault && onlyThisMonth;
+      const conflict = db.value<number>("SELECT id FROM budgets WHERE owner = ? AND ifnull(category_id,0) = ? AND ifnull(month,'') = ?", [data.owner, data.category_id ?? 0, data.month ?? '']);
+      if (d.id && !asOverride) {
+        if (conflict && conflict !== d.id) throw new Error('Another budget already covers this category and month — edit that one instead.');
+        db.update('budgets', d.id, data);
+      } else {
+        if (conflict) { db.update('budgets', conflict, data); return 'Budget updated'; }
         db.insert('budgets', data);
       }
-      return true;
-    }, 'Budget saved');
+      return asOverride ? `Saved for ${monthLabel(month)} only — your regular budget is unchanged` : 'Budget saved';
+    });
+    if (ok) { act(() => ok, ok); onClose(); }
+  };
+  const remove = () => {
+    const ok = act(() => { db.run('DELETE FROM budgets WHERE id = ?', [d.id!]); return true; }, b.month ? `${monthLabel(b.month)} change removed` : 'Budget removed');
     if (ok) onClose();
   };
   return (
-    <Modal title={d.id ? 'Edit budget' : 'New budget'} onClose={onClose} footer={<>
-      {d.id && <button className="btn danger" style={{ marginRight: 'auto' }} onClick={() => { act(() => db.run('DELETE FROM budgets WHERE id = ?', [d.id!]), 'Budget removed'); onClose(); }}>Delete</button>}
+    <Modal title={d.id ? `Edit budget${b.month ? ` · ${monthLabel(b.month)} only` : ''}` : 'New budget'} onClose={onClose} footer={<>
+      {d.id && <button className="btn danger" style={{ marginRight: 'auto' }} onClick={remove}>Delete</button>}
       <button className="btn" onClick={onClose}>Cancel</button><button className="btn primary" onClick={save}>Save budget</button></>}>
       <div className="form-grid">
-        <Field label="For"><Segmented label="Owner" value={(d.owner ?? 'personal') as Owner} onChange={(v) => p({ owner: v, category_id: null })} options={[{ value: 'personal' as Owner, label: 'Personal' }, { value: 'business' as Owner, label: 'Business' }]} /></Field>
-        <Field label="Category" hint="Includes its subcategories"><Select value={d.category_id} onChange={(v) => p({ category_id: v })} options={categoryOptions(fin.categories, 'expense', (d.owner ?? 'personal') as Owner)} placeholder={`All ${d.owner ?? 'personal'} spending`} /></Field>
+        {lockedOwner
+          ? <Field label="For"><div className="input" style={{ display: 'flex', alignItems: 'center' }}>{owner === 'business' ? 'Business' : 'Personal'}</div></Field>
+          : <Field label="For"><Segmented label="Owner" value={owner} onChange={(v) => p({ owner: v, category_id: null })} options={[{ value: 'personal' as Owner, label: 'Personal' }, { value: 'business' as Owner, label: 'Business' }]} /></Field>}
+        <Field label="Category" hint="Includes its subcategories"><Select value={d.category_id} onChange={(v) => p({ category_id: v })} options={categoryOptions(fin.categories, 'expense', owner, d.category_id)} placeholder={`All ${owner} spending`} /></Field>
         <Field label="Monthly amount"><MoneyInput value={d.amount} onChange={(v) => p({ amount: v ?? undefined })} currency={d.currency ?? fin.base} /></Field>
         <Field label="Currency"><CurrencySelect value={d.currency ?? fin.base} onChange={(v) => p({ currency: v })} /></Field>
-        <div className="full"><Check checked={onlyThisMonth} onChange={setOnly}>Only for {monthLabel(month)} (otherwise every month)</Check></div>
+        <div className="full stack" style={{ gap: 6 }}>
+          <Check checked={onlyThisMonth} onChange={setOnly}>{editingDefault ? `Change it only for ${monthLabel(month)}` : `Only for ${monthLabel(month)}`}</Check>
+          <small className="muted">{onlyThisMonth ? (editingDefault ? 'Your regular monthly budget stays as it is; this month uses the new amount.' : 'Applies to this month only.') : 'Repeats every month until you change it.'}</small>
+        </div>
       </div>
     </Modal>
   );
@@ -56,6 +72,19 @@ export default function Budgets() {
       <div className="row"><button className="btn icon-btn" aria-label="Previous month" onClick={() => setMonth(monthKey(addMonths(month + '-01', -1)))}>‹</button><b style={{ minWidth: 130, textAlign: 'center' }}>{monthLabel(month)}</b><button className="btn icon-btn" aria-label="Next month" onClick={() => setMonth(monthKey(addMonths(month + '-01', 1)))}>›</button></div>
       <button className="btn primary" onClick={() => setEditing({ owner: defOwner, currency: fin.base })}><Icon name="plus" />New budget</button>
     </PageHead>
+    {rows.length > 0 && (() => {
+      const cat = rows.filter((r) => r.category_id != null);
+      const budgeted = cat.reduce((t, r) => t + fin.conv(r.amount, r.currency), 0);
+      const spent = cat.reduce((t, r) => t + fin.conv(r.spent, r.currency), 0);
+      const over = rows.filter((r) => r.status === 'over').length;
+      return <div className="grid g4" style={{ marginBottom: 16 }}>
+        <Stat label={`Budgeted · ${monthLabel(month)}`} v={budgeted} sub="Sum of category budgets" />
+        <Stat label="Spent in those categories" v={spent} tone="out" />
+        <Stat label={spent > budgeted ? 'Over by' : 'Left to spend'} v={Math.abs(budgeted - spent)} tone={spent > budgeted ? 'out' : 'in'} />
+        <Stat label="Budgets over the limit" sub={over ? 'Tap a budget to adjust it' : 'All within limits'}><div className="val">{over} of {rows.length}</div></Stat>
+      </div>;
+    })()}
+    {scope !== 'all' && <p className="small muted" style={{ marginBottom: 12 }}>Showing {scope === 'business' ? 'business' : 'personal'} budgets. Switch to All to see both.</p>}
     {rows.length === 0 ? <Panel><Empty title="No budgets yet" action={<button className="btn primary" onClick={() => setEditing({ owner: defOwner, currency: fin.base })}>Create a budget</button>}>Set a monthly limit for a category, or for all personal or business spending.</Empty></Panel> : (
       <div className="grid g2">
         {(['personal', 'business'] as Owner[]).filter((o) => rows.some((r) => r.owner === o)).map((o) => (
@@ -74,7 +103,7 @@ export default function Budgets() {
     )}
     {unbudgeted.length > 0 && (
       <Panel title="Spending without a budget this month">
-        <div className="row wrap">{unbudgeted.map((c) => <button key={String(c.id)} className="btn sm" onClick={() => setEditing({ owner: (c.owner === 'business' ? 'business' : 'personal') as Owner, category_id: c.id as number, currency: fin.base, amount: Math.ceil(c.amount / 10000) * 10000 })}>{c.name} · {formatMoney(c.amount, fin.base)}</button>)}</div>
+        <div className="row wrap">{unbudgeted.map((c) => <button key={String(c.id)} className="btn sm" onClick={() => setEditing({ owner: (c.owner === 'business' ? 'business' : 'personal') as Owner, category_id: c.id as number, currency: fin.base, amount: Math.max(10000, Math.ceil(c.amount / 10000) * 10000) })}>{c.name} · {formatMoney(c.amount, fin.base)}</button>)}</div>
       </Panel>
     )}
     {editing && <BudgetForm b={editing} month={month} onClose={() => setEditing(null)} />}

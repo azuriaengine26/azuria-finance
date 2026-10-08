@@ -63,7 +63,7 @@ export default function Dashboard() {
         <div className="lbl">Net worth</div>
         <div className="big">{formatMoney(nw.netWorth, fin.base)}</div>
         <AltLine v={nw.netWorth} />
-        {prevNw != null && <div className="alt" style={{ color: nw.netWorth >= prevNw ? '#7fe0bd' : '#ff9cad' }}>{formatMoney(nw.netWorth - prevNw, fin.base, { sign: true })} since last month-end</div>}
+        {prevNw != null && <div className={`alt ${nw.netWorth >= prevNw ? 'in' : 'out'}`}>{formatMoney(nw.netWorth - prevNw, fin.base, { sign: true })} since last month-end</div>}
       </div>
       <div className="cell">
         <div className="lbl">Cash & bank</div>
@@ -72,12 +72,12 @@ export default function Dashboard() {
       </div>
       <div className="cell">
         <div className="lbl">In this month</div>
-        <div className="mid" style={{ color: '#7fe0bd' }}>{formatMoney(tm.income, fin.base)}</div>
+        <div className="mid in">{formatMoney(tm.income, fin.base)}</div>
         <div className="alt">Out {formatMoney(tm.expense, fin.base)}</div>
       </div>
       <div className="cell">
         <div className="lbl">Net this month</div>
-        <div className="mid" style={{ color: tm.net >= 0 ? '#7fe0bd' : '#ff9cad' }}>{formatMoney(tm.net, fin.base, { sign: true })}</div>
+        <div className={`mid ${tm.net >= 0 ? 'in' : 'out'}`}>{formatMoney(tm.net, fin.base, { sign: true })}</div>
         <div className="alt">{tm.income === 0 ? 'No income yet this month' : tm.net < 0 ? 'Spending is ahead of income so far' : `${tm.savingsRate}% of income kept`}</div>
       </div>
     </section>

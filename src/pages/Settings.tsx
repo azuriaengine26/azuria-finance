@@ -36,7 +36,7 @@ function CategoryEditor() {
       <div className="list" style={{ border: '1px solid var(--line)', borderRadius: 12 }}>
         {parents.map((p) => (
           <div key={p.id}>
-            <button className="item" onClick={() => setEdit(p)}><span className="dot" style={{ background: p.color ?? '#94a3b8', width: 14, height: 14, borderRadius: 4 }} /><span className="grow title">{p.name} {p.is_archived ? <Chip>Archived</Chip> : null}</span><span className="meta">{usage.get(p.id) ?? 0} uses{p.tax_category ? ` · tax: ${p.tax_category}` : ''}</span></button>
+            <button className="item" onClick={() => setEdit(p)}><span className="dot" style={{ background: p.color ?? '#9a8a78', width: 14, height: 14, borderRadius: 4 }} /><span className="grow title">{p.name} {p.is_archived ? <Chip>Archived</Chip> : null}</span><span className="meta">{usage.get(p.id) ?? 0} uses{p.tax_category ? ` · tax: ${p.tax_category}` : ''}</span></button>
             {cats.filter((c) => c.parent_id === p.id).map((s) => <button key={s.id} className="item" style={{ paddingLeft: 46 }} onClick={() => setEdit(s)}><span className="grow">{s.name}</span><span className="meta">{usage.get(s.id) ?? 0} uses</span></button>)}
           </div>
         ))}
@@ -50,7 +50,7 @@ function CategoryEditor() {
           <div className="form-grid">
             <Field label="Name"><Text value={edit.name} onChange={(v) => setEdit({ ...edit, name: v })} /></Field>
             <Field label="Subcategory of"><Select value={edit.parent_id} onChange={(v) => setEdit({ ...edit, parent_id: v })} options={parents.filter((p) => p.id !== edit.id).map((p) => ({ value: p.id, label: p.name }))} placeholder="None (top level)" /></Field>
-            <Field label="Colour"><input type="color" className="input" value={edit.color ?? '#4f7cff'} onChange={(e) => setEdit({ ...edit, color: e.target.value })} /></Field>
+            <Field label="Colour"><input type="color" className="input" value={edit.color ?? '#b8934e'} onChange={(e) => setEdit({ ...edit, color: e.target.value })} /></Field>
             {kind === 'expense' && <Field label="Tax category"><Text value={edit.tax_category} onChange={(v) => setEdit({ ...edit, tax_category: v })} placeholder="e.g. Office expense" /></Field>}
             {kind === 'expense' && <div className="full"><Check checked={edit.deductible_default === 1} onChange={(v) => setEdit({ ...edit, deductible_default: v ? 1 : null })}>Usually tax-deductible (can be changed per transaction)</Check></div>}
           </div>
@@ -176,8 +176,8 @@ function Backup() {
       <div className="stack">
         <div className="small muted">Last saved on this device: {lastSaved ? new Date(lastSaved).toLocaleString() : '—'} · Storage {persisted ? 'protected from automatic clean-up' : 'may be cleared by the browser if space runs low — install the app to your Home Screen / Dock and keep backups'}.</div>
         <div className="row wrap">
-          <button className="btn primary" onClick={async () => download(`azuria-finance-${stamp}.azfin`, await vault.exportEncrypted(db.export()), 'application/json')}><Icon name="download" />Encrypted backup</button>
-          <button className="btn" onClick={() => download(`azuria-finance-${stamp}.json`, exportJSON(db), 'application/json')}><Icon name="download" />JSON backup (not encrypted)</button>
+          <button className="btn primary" onClick={async () => download(`azuria-finance-${stamp}.encrypted.json`, await vault.exportEncrypted(db.export()), 'application/json')}><Icon name="download" />Encrypted backup</button>
+          <button className="btn" onClick={() => download(`azuria-finance-${stamp}.readable.json`, exportJSON(db), 'application/json')}><Icon name="download" />JSON backup (not encrypted)</button>
           <button className="btn" onClick={() => download(`transactions-${stamp}.csv`, transactionsCSV(db), 'text/csv')}><Icon name="download" />Transactions CSV</button>
           <button className="btn" onClick={() => act(() => { exportAllExcel(); })}><Icon name="download" />Everything as Excel</button>
         </div>
@@ -252,7 +252,7 @@ export default function Settings() {
         <Field label="Main currency" hint="Totals and charts are shown in this currency"><CurrencySelect value={setting('base_currency', 'USD')} onChange={(v) => updateSetting('base_currency', v)} /></Field>
         <Field label="Also show amounts in"><Select value={setting('show_secondary', '1') === '1' ? setting('secondary_currency', 'HNL') : ''} onChange={(v) => { updateSetting('show_secondary', v ? '1' : '0'); if (v) updateSetting('secondary_currency', v); }} options={CURRENCIES.map((c) => ({ value: c.code, label: c.code }))} placeholder="Don’t show a second currency" /></Field>
         <Field label="Business name"><Text value={setting('business_name', 'Azuria Engine')} onChange={(v) => updateSetting('business_name', v)} /></Field>
-        <Field label="Appearance"><Segmented label="Theme" value={setting('theme', 'system')} onChange={(v) => updateSetting('theme', v)} options={[{ value: 'system', label: 'Automatic' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} /></Field>
+        <Field label="Appearance"><Segmented label="Theme" value={setting('theme', 'dark')} onChange={(v) => updateSetting('theme', v)} options={[{ value: 'dark', label: 'Azuria (dark)' }, { value: 'light', label: 'Ivory (light)' }, { value: 'system', label: 'Match device' }]} /></Field>
         <Field label="Date format in imported files"><Select value={setting('date_order', 'MDY')} onChange={(v) => updateSetting('date_order', v ?? 'MDY')} options={[{ value: 'MDY', label: 'Month/Day/Year' }, { value: 'DMY', label: 'Day/Month/Year' }]} /></Field>
         <div className="full stack" style={{ gap: 6 }}>
           <Check checked={setting('owner_draws_as_personal_income', '1') === '1'} onChange={(v) => updateSetting('owner_draws_as_personal_income', v ? '1' : '0')}>Count owner draws from the business as personal income</Check>

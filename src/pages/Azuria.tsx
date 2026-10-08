@@ -33,7 +33,7 @@ export default function Azuria() {
     <MissingRates />
     <section className="ledger" aria-label="Business summary">
       <div className="cell"><div className="lbl">Net profit · {RANGE_LABELS[range].toLowerCase()}</div><div className="big">{formatMoney(t.net, fin.base)}</div><div className="alt">{margin != null ? `${margin}% margin` : 'No revenue in this period'}</div></div>
-      <div className="cell"><div className="lbl">Revenue</div><div className="mid" style={{ color: '#7fe0bd' }}>{formatMoney(t.income, fin.base)}</div><div className="alt">{clients.length} paying client{clients.length === 1 ? '' : 's'}</div></div>
+      <div className="cell"><div className="lbl">Revenue</div><div className="mid in">{formatMoney(t.income, fin.base)}</div><div className="alt">{clients.length} paying client{clients.length === 1 ? '' : 's'}</div></div>
       <div className="cell"><div className="lbl">Expenses</div><div className="mid">{formatMoney(t.expense, fin.base)}</div><div className="alt">{t.income ? `${pct(labour, t.income)}% of revenue on agents` : '—'}</div></div>
       <div className="cell"><div className="lbl">Owner draws</div><div className="mid">{formatMoney(t.ownerDraws, fin.base)}</div><div className="alt">Profit after draws {formatMoney(t.net - t.ownerDraws, fin.base, { sign: true })}</div></div>
     </section>

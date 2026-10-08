@@ -261,6 +261,31 @@ describe('debts, receivables, net worth', () => {
   });
 });
 
+describe('budgets', () => {
+  beforeEach(fresh);
+  it('month override replaces the regular budget for that month only; subcategories, pending and currencies count', () => {
+    const a = saveAccount(db, { name: 'HNL', type: 'checking', owner: 'personal', currency: 'HNL', starting_date: '2026-01-01', starting_balance: $('100000') });
+    const groceries = cat('Groceries');
+    const sub = db.insert('categories', { name: 'Market', kind: 'expense', owner: 'personal', parent_id: groceries });
+    db.insert('budgets', { owner: 'personal', category_id: groceries, amount: $('200'), currency: 'USD' });
+    db.insert('budgets', { owner: 'personal', category_id: groceries, amount: $('300'), currency: 'USD', month: '2026-08' });
+    saveTransaction(db, { date: '2026-08-03', kind: 'expense', account_id: a, amount: $('2620'), category_id: groceries });           // L2,620 = $100
+    saveTransaction(db, { date: '2026-08-04', kind: 'expense', account_id: a, amount: $('1310'), category_id: sub, status: 'pending' }); // L1,310 = $50, pending still counts
+    saveTransaction(db, { date: '2026-09-04', kind: 'expense', account_id: a, amount: $('7860'), category_id: groceries });           // $300 in September
+    const f = new Finance(db, REF);
+    const aug = f.budgets('2026-08', 'personal');
+    expect(aug).toHaveLength(1);
+    expect(aug[0]).toMatchObject({ amount: $('300'), spent: $('150'), remaining: $('150'), status: 'ok' });
+    const sep = f.budgets('2026-09', 'personal');
+    expect(sep[0]).toMatchObject({ amount: $('200'), spent: $('300'), status: 'over' });
+    expect(f.budgets('2026-08', 'business')).toHaveLength(0);
+  });
+  it('display formatting never crashes on fractional chart values', () => {
+    expect(formatMoney(0.5, 'USD')).toBe('$0.01');
+    expect(formatMoney(Number.NaN, 'USD')).toBe('$0.00');
+  });
+});
+
 describe('recurring transactions', () => {
   beforeEach(fresh);
 

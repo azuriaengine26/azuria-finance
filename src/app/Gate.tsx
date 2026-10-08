@@ -5,11 +5,12 @@ import { seedDefaults } from '../core/seed';
 import { loadDemoData } from '../core/demo';
 import { generateRecurring } from '../core/repo';
 import { restoreJSON } from '../core/backup';
+import logo from '../assets/azuria-logo.png';
 
 export type Unlocked = { db: Db; vault: Vault };
 
 function BrandMark() {
-  return <div className="row" style={{ gap: 12 }}><div className="brand-mark" style={{ width: 40, height: 40, fontSize: 19 }}>A</div><div><b style={{ color: '#fff', fontSize: 17 }}>Azuria Finance</b><div style={{ color: '#a9b8d0', fontSize: 13 }}>Personal + business money, on your device</div></div></div>;
+  return <div className="stack" style={{ gap: 6, alignItems: 'center', textAlign: 'center' }}><img className="gate-logo" src={logo} alt="Azuria" /><div style={{ color: 'var(--gate-muted)', fontSize: 13.5 }}>Finance · personal and business money, on your device</div></div>;
 }
 
 async function openDb(bytes: Uint8Array): Promise<Db> {
@@ -65,7 +66,7 @@ export function ForgotPin({ onBack, onDone }: { onBack: () => void; onDone: () =
         <h1>Forgot your PIN?</h1>
         <p>There is no recovery: your PIN is the encryption key, and nobody — including this app — can decrypt your data without it.</p>
         <p>You can erase the data on this device and start again, then restore from a backup file (an encrypted backup needs the PIN it was made with; a JSON backup does not).</p>
-        <label className="stack" style={{ gap: 6 }}><span style={{ color: '#dce4f0' }}>Type ERASE to confirm</span><input className="input" value={confirm} onChange={(e) => setConfirm(e.target.value)} /></label>
+        <label className="stack" style={{ gap: 6 }}><span style={{ color: 'var(--gate-ink)' }}>Type ERASE to confirm</span><input className="input" value={confirm} onChange={(e) => setConfirm(e.target.value)} /></label>
         <button className="btn danger solid" disabled={confirm !== 'ERASE'} onClick={async () => { await Vault.eraseEverything(); onDone(); }}>Erase this device’s data</button>
         <button className="btn" onClick={onBack}>Back</button>
       </div>
@@ -115,12 +116,12 @@ export function Onboarding({ onUnlock }: { onUnlock: (u: Unlocked) => void }) {
         {step === 'intro' && (<>
           <h1>One place for every dollar and lempira</h1>
           <p>Track personal and Azuria business money separately, with a combined picture whenever you want it.</p>
-          <ul style={{ color: '#c9d3e3', paddingLeft: 18, margin: 0, lineHeight: 1.7 }}>
+          <ul style={{ color: 'var(--gate-ink)', paddingLeft: 18, margin: 0, lineHeight: 1.7 }}>
             <li>Your data stays on this device, encrypted with a PIN only you know.</li>
             <li>Nothing is sent to any server. No bank passwords are ever asked for.</li>
             <li>Import bank statements (CSV, Excel, OFX) whenever you like.</li>
           </ul>
-          {import.meta.env.MODE === 'single' && <p style={{ fontSize: 13.5, border: '1px solid #2a3c5c', borderRadius: 10, padding: '10px 12px' }}>Viewing this inside Claude? It’s a live preview: everything works except file downloads (exports and backups), which the preview window blocks. For your real finances, use your installed copy so you can make backups.</p>}
+          {import.meta.env.MODE === 'single' && <p style={{ fontSize: 13.5, border: '1px solid var(--gate-line)', borderRadius: 10, padding: '10px 12px' }}>Viewing this inside Claude? This is a live preview. Exports and backups ask you to confirm before saving. For everyday use, install the Mac app or add the app to your iPhone Home Screen.</p>}
           <button className="btn primary" onClick={() => setStep('pin')}>Set up</button>
         </>)}
         {step === 'pin' && (<>
@@ -140,7 +141,7 @@ export function Onboarding({ onUnlock }: { onUnlock: (u: Unlocked) => void }) {
             <button type="button" className="choice" aria-pressed={mode === 'restore'} onClick={() => setMode('restore')}><b>Restore a backup</b><span>From an Azuria Finance backup file (.json or encrypted).</span></button>
           </div>
           {mode === 'restore' && (<>
-            <input type="file" accept=".json,.azfin,application/json" onChange={(e) => setFile(e.target.files?.[0] ?? null)} style={{ color: '#c9d3e3' }} />
+            <input type="file" accept=".json,.azfin,application/json" onChange={(e) => setFile(e.target.files?.[0] ?? null)} style={{ color: 'var(--gate-ink)' }} />
             <input className="input" type="password" value={filePin} onChange={(e) => setFilePin(e.target.value)} placeholder="PIN of the encrypted backup (if any)" style={{ fontSize: 15, letterSpacing: 0 }} />
           </>)}
           {err && <div className="err" role="alert">{err}</div>}

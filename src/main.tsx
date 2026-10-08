@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './styles.css';
 
+if (/Electron/.test(navigator.userAgent)) document.documentElement.classList.add('desktop-app');
+
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
 
 // Offline support for the installed app (not used inside the native wrapper or the single-file build).

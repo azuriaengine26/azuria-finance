@@ -15,7 +15,8 @@ function useWidth<T extends HTMLElement>() {
 }
 
 function niceMax(v: number) {
-  if (v <= 0) return 1;
+  // Money is in minor units; never let an axis go below $1 so ticks stay whole cents.
+  if (v <= 100) return 100;
   const p = 10 ** Math.floor(Math.log10(v));
   const n = v / p;
   return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p;
@@ -34,7 +35,7 @@ export function PairBars({ data, aLabel, bLabel, height = 220, showNet, aColor =
   const y = (v: number) => padT + ih - ((v - lo) / (max - lo)) * ih;
   const slot = (w - padL) / Math.max(1, data.length);
   const bw = Math.min(18, (slot - 8) / (bLabel ? 2 : 1));
-  const ticks = [lo, lo + (max - lo) / 2, max];
+  const ticks = [lo, Math.round(lo + (max - lo) / 2), max];
   const f = (v: number) => formatMoney(v, fin.base, { compact: true });
   return (
     <div ref={ref} style={{ position: 'relative' }}>
@@ -51,19 +52,19 @@ export function PairBars({ data, aLabel, bLabel, height = 220, showNet, aColor =
             </g>
           );
         })}
-        {showNet && <polyline fill="none" stroke="var(--azure)" strokeWidth={2} points={data.map((d, i) => `${padL + i * slot + slot / 2},${y(d.a - (d.b ?? 0))}`).join(' ')} />}
+        {showNet && <polyline fill="none" stroke="var(--accent)" strokeWidth={2} points={data.map((d, i) => `${padL + i * slot + slot / 2},${y(d.a - (d.b ?? 0))}`).join(' ')} />}
       </svg>
       <div className="row tiny muted" style={{ gap: 14, marginTop: 6 }}>
         <span className="row" style={{ gap: 5 }}><i style={{ width: 10, height: 10, background: aColor, borderRadius: 3 }} />{aLabel}</span>
         {bLabel && <span className="row" style={{ gap: 5 }}><i style={{ width: 10, height: 10, background: 'var(--spend)', borderRadius: 3 }} />{bLabel}</span>}
-        {showNet && <span className="row" style={{ gap: 5 }}><i style={{ width: 12, height: 2, background: 'var(--azure)' }} />Net</span>}
+        {showNet && <span className="row" style={{ gap: 5 }}><i style={{ width: 12, height: 2, background: 'var(--accent)' }} />Net</span>}
         {hover != null && data[hover] && <span style={{ marginLeft: 'auto', color: 'var(--ink)' }}>{data[hover].label}: {f(data[hover].a)}{bLabel ? ` / ${f(data[hover].b ?? 0)}` : ''}</span>}
       </div>
     </div>
   );
 }
 
-export function LineChart({ data, height = 200, color = 'var(--azure)', label }: { data: { label: string; v: number }[]; height?: number; color?: string; label: string }) {
+export function LineChart({ data, height = 200, color = 'var(--accent)', label }: { data: { label: string; v: number }[]; height?: number; color?: string; label: string }) {
   const { fin } = useApp();
   const [ref, w] = useWidth<HTMLDivElement>();
   const [hover, setHover] = useState<number | null>(null);
@@ -82,7 +83,7 @@ export function LineChart({ data, height = 200, color = 'var(--azure)', label }:
       <svg className="chart" width={w} height={height} role="img" aria-label={label}
         onMouseMove={(e) => { const r = (e.currentTarget as SVGElement).getBoundingClientRect(); const i = Math.round(((e.clientX - r.left - padL) / (w - padL - 8)) * (data.length - 1)); setHover(Math.max(0, Math.min(data.length - 1, i))); }}
         onMouseLeave={() => setHover(null)}>
-        {[lo, (lo + hi) / 2, hi].map((t) => <g key={t}><line className="grid-line" x1={padL} x2={w} y1={y(t)} y2={y(t)} /><text x={padL - 6} y={y(t) + 4} textAnchor="end">{f(t)}</text></g>)}
+        {[lo, Math.round((lo + hi) / 2), hi].map((t) => <g key={t}><line className="grid-line" x1={padL} x2={w} y1={y(t)} y2={y(t)} /><text x={padL - 6} y={y(t) + 4} textAnchor="end">{f(t)}</text></g>)}
         {lo < 0 && <line x1={padL} x2={w} y1={y(0)} y2={y(0)} stroke="var(--line-strong)" />}
         <polygon points={`${x(0)},${y(Math.max(lo, 0))} ${pts} ${x(data.length - 1)},${y(Math.max(lo, 0))}`} fill={color} opacity={0.08} />
         <polyline points={pts} fill="none" stroke={color} strokeWidth={2.2} strokeLinejoin="round" />
@@ -101,20 +102,20 @@ export function RankBars({ rows, total, onPick, max = 8, cur }: { rows: { name: 
   const rest = rows.slice(max).reduce((s, r) => s + r.amount, 0);
   const top = Math.max(1, ...shown.map((r) => r.amount));
   const sum = total ?? rows.reduce((s, r) => s + r.amount, 0);
-  const all = rest > 0 ? [...shown, { name: `${rows.length - max} more`, amount: rest, color: '#94a3b8' }] : shown;
+  const all = rest > 0 ? [...shown, { name: `${rows.length - max} more`, amount: rest, color: '#9a8a78' }] : shown;
   return (
     <div className="stack" style={{ gap: 10 }}>
       {all.map((r) => (
         <button key={r.name} type="button" onClick={() => onPick?.(r.name)} style={{ all: 'unset', cursor: onPick ? 'pointer' : 'default', display: 'block' }}>
           <div className="spread small"><span className="ellipsis">{r.name}</span><span className="num"><b>{formatMoney(r.amount, cur ?? fin.base)}</b> <span className="muted">{sum ? Math.round((r.amount / sum) * 100) : 0}%</span></span></div>
-          <div style={{ height: 7, borderRadius: 99, background: 'var(--surface-2)', marginTop: 4 }}><div style={{ width: `${(r.amount / top) * 100}%`, height: '100%', borderRadius: 99, background: r.color ?? 'var(--azure)' }} /></div>
+          <div style={{ height: 7, borderRadius: 99, background: 'var(--surface-2)', marginTop: 4 }}><div style={{ width: `${(r.amount / top) * 100}%`, height: '100%', borderRadius: 99, background: r.color ?? 'var(--accent)' }} /></div>
         </button>
       ))}
     </div>
   );
 }
 
-export function Spark({ values, color = 'var(--azure)', width = 120, height = 34 }: { values: number[]; color?: string; width?: number; height?: number }) {
+export function Spark({ values, color = 'var(--accent)', width = 120, height = 34 }: { values: number[]; color?: string; width?: number; height?: number }) {
   if (values.length < 2) return null;
   const lo = Math.min(...values), hi = Math.max(...values);
   const pts = values.map((v, i) => `${(i / (values.length - 1)) * width},${height - 3 - ((v - lo) / (hi - lo || 1)) * (height - 6)}`).join(' ');
@@ -135,7 +136,7 @@ export function MultiLine({ series, height = 220 }: { series: { name: string; co
   return (
     <div ref={ref}>
       <svg className="chart" width={w} height={height} role="img" aria-label="Remaining debt over time by method">
-        {[0, hi / 2, hi].map((t) => <g key={t}><line className="grid-line" x1={padL} x2={w} y1={y(t)} y2={y(t)} /><text x={padL - 6} y={y(t) + 4} textAnchor="end">{formatMoney(t, fin.base, { compact: true })}</text></g>)}
+        {[0, Math.round(hi / 2), hi].map((t) => <g key={t}><line className="grid-line" x1={padL} x2={w} y1={y(t)} y2={y(t)} /><text x={padL - 6} y={y(t) + 4} textAnchor="end">{formatMoney(t, fin.base, { compact: true })}</text></g>)}
         {Array.from({ length: years + 1 }, (_, k) => k * 12).filter((m) => m < n).map((m) => <text key={m} x={x(m)} y={height - 5} textAnchor="middle">{m === 0 ? 'Now' : `${m / 12}y`}</text>)}
         {series.map((s) => <polyline key={s.name} points={s.values.map((v, i) => `${x(i)},${y(v)}`).join(' ')} fill="none" stroke={s.color} strokeWidth={2.2} strokeDasharray={s.dashed ? '7 5' : undefined} />)}
       </svg>

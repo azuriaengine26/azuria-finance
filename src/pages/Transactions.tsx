@@ -27,7 +27,7 @@ export function TxRowItem({ t, onOpen }: { t: TxRow & { tagNames?: string[] }; o
         <div className="title ellipsis">{title}</div>
         <div className="meta ellipsis">
           {meta}
-          {t.owner === 'business' && !isTransfer && <> · <span style={{ color: 'var(--azure)' }}>Business</span></>}
+          {t.owner === 'business' && !isTransfer && <> · <span style={{ color: 'var(--accent)' }}>Business</span></>}
           {t.status !== 'cleared' && <> · <Chip kind={t.status}>{t.status === 'expected' ? (t.kind === 'income' ? 'Expected' : 'Scheduled') : t.status}</Chip></>}
           {t.is_demo ? <> · demo</> : null}
         </div>

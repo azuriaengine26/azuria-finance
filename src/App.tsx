@@ -5,6 +5,7 @@ import { Vault } from './core/vault';
 import { AppProvider, useApp } from './app/context';
 import { LockScreen, Onboarding, ForgotPin, type Unlocked } from './app/Gate';
 import { Icon } from './ui/icons';
+import logo from './assets/azuria-logo.png';
 import { ScopeSwitch, Chip } from './ui/components';
 import { TxForm } from './ui/TxForm';
 import { hasDemoData } from './core/backup';
@@ -26,6 +27,7 @@ import Azuria from './pages/Azuria';
 import Alerts from './pages/Alerts';
 import More from './pages/More';
 import { useSystemNotifications } from './pages/Alerts';
+import { ErrorBoundary } from './app/ErrorBoundary';
 
 export const NAV: { to: string; label: string; icon: string; group?: string }[] = [
   { to: '/', label: 'Dashboard', icon: 'home' },
@@ -70,7 +72,7 @@ function Shell() {
   return (
     <div className="shell">
       <nav className="rail" aria-label="Main">
-        <div className="brand"><div className="brand-mark">A</div><div><b>Azuria Finance</b><span>{saveState === 'saving' ? 'Saving…' : saveState === 'error' ? 'Not saved!' : 'Encrypted · saved'}</span></div></div>
+        <div className="brand"><img src={logo} alt="Azuria" width={196} height={114} /><span className="tiny" style={{ color: 'var(--rail-muted)' }}>Finance · {saveState === 'saving' ? 'saving…' : saveState === 'error' ? 'not saved!' : 'encrypted & saved'}</span></div>
         {NAV.map((n) => (
           <div key={n.to}>
             {n.group && <div className="group">{n.group}</div>}
@@ -92,13 +94,14 @@ function Shell() {
             {demo && <Chip kind="demo">Demo data</Chip>}
             <button className="btn ghost icon-btn" onClick={() => nav('/alerts')} aria-label={`Alerts (${alertCount})`} style={{ position: 'relative' }}>
               <Icon name="bell" />
-              {alertCount > 0 && <span style={{ position: 'absolute', top: 4, right: 4, minWidth: 16, height: 16, borderRadius: 8, background: 'var(--spend)', color: '#fff', fontSize: 10.5, display: 'grid', placeItems: 'center', padding: '0 4px', fontWeight: 600 }}>{alertCount > 99 ? '99+' : alertCount}</span>}
+              {alertCount > 0 && <span style={{ position: 'absolute', top: 4, right: 4, minWidth: 16, height: 16, borderRadius: 8, background: 'var(--spend)', color: 'var(--surface)', fontSize: 10.5, display: 'grid', placeItems: 'center', padding: '0 4px', fontWeight: 600 }}>{alertCount > 99 ? '99+' : alertCount}</span>}
             </button>
             <button className="btn ghost icon-btn hide-d" onClick={() => lock()} aria-label="Lock"><Icon name="lock" /></button>
             <button className="btn primary hide-m" onClick={() => setAdding(true)}><Icon name="plus" />New transaction</button>
           </div>
         </header>
         <main className="content">
+          <ErrorBoundary resetKey={loc.pathname + loc.search}>
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/azuria" element={<Azuria />} />
@@ -120,6 +123,7 @@ function Shell() {
             <Route path="/more" element={<More />} />
             <Route path="*" element={<Dashboard />} />
           </Routes>
+          </ErrorBoundary>
         </main>
       </div>
       <nav className="tabbar" aria-label="Quick">
@@ -149,7 +153,7 @@ export default function App() {
     })();
   }, []);
 
-  if (phase.k === 'loading') return <div className="gate"><p style={{ color: '#a9b8d0' }}>Loading…</p></div>;
+  if (phase.k === 'loading') return <div className="gate"><img className="gate-logo" src={logo} alt="Azuria" /></div>;
   if (phase.k === 'error') return <div className="gate"><div className="gate-card"><h1>Can’t start</h1><p>{phase.msg}</p></div></div>;
   if (phase.k === 'new') return <Onboarding onUnlock={(u) => setPhase({ k: 'open', u })} />;
   if (phase.k === 'locked') return <LockScreen onUnlock={(u) => setPhase({ k: 'open', u })} onReset={() => setPhase({ k: 'forgot' })} />;

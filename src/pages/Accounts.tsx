@@ -96,7 +96,7 @@ export default function Accounts() {
                 <div className="title ellipsis">{a.name} {!a.is_active && <Chip>Inactive</Chip>} {a.is_demo ? <Chip kind="demo">Demo</Chip> : null}</div>
                 <div className="meta">{ACCOUNT_TYPES.find((t) => t.value === a.type)?.label}{a.institution ? ` · ${a.institution}` : ''} · {a.currency}{a.pendingDelta ? ` · pending ${formatMoney(a.pendingDelta, a.currency, { sign: true })}` : ''}</div>
               </div>
-              <div className="hide-m"><Spark values={history(a.id)} color={a.liability ? 'var(--spend)' : 'var(--azure)'} /></div>
+              <div className="hide-m"><Spark values={history(a.id)} color={a.liability ? 'var(--spend)' : 'var(--accent)'} /></div>
               <div className="amt" style={{ minWidth: 120 }}>
                 {a.liability ? <><Money v={-a.balance} cur={a.currency} tone={a.balance < 0 ? 'out' : 'none'} /><span className="alt">owed</span></> : <Money v={a.balance} cur={a.currency} alt={a.currency !== fin.base} />}
               </div>

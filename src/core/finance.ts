@@ -170,11 +170,11 @@ export class Finance {
     }
     const rows = [...m.entries()].map(([id, amount]) => {
       const c = id === 'none' ? undefined : this.category(id);
-      return { id, name: c?.name ?? 'Uncategorized', color: c?.color ?? '#94a3b8', owner: c?.owner, amount };
+      return { id, name: c?.name ?? 'Uncategorized', color: c?.color ?? '#9a8a78', owner: c?.owner, amount };
     });
     if (kind === 'income' && scope === 'personal' && this.drawsAsIncome) {
       const d = this.ownerMovements(range).draws;
-      if (d) rows.push({ id: 'none', name: 'Owner draws (from business)', color: '#7c8aa5', owner: 'personal', amount: d });
+      if (d) rows.push({ id: 'none', name: 'Owner draws (from business)', color: '#b8934e', owner: 'personal', amount: d });
     }
     return rows.sort((a, b) => b.amount - a.amount);
   }
@@ -435,7 +435,7 @@ export class Finance {
         .reduce((s, t) => s + this.conv(t.amount, t.currency, b.currency), 0);
       const used = b.amount > 0 ? pct(spent, b.amount)! : spent > 0 ? 100 : 0;
       const status = used > 100 ? 'over' : used >= 85 ? 'warn' : 'ok';
-      return { ...b, name: cat?.name ?? (b.owner === 'business' ? 'All business spending' : 'All personal spending'), color: cat?.color ?? '#64748b', spent, remaining: b.amount - spent, used, status, pace: elapsed > 0 && b.amount > 0 ? used / (elapsed * 100) : null };
+      return { ...b, name: cat?.name ?? (b.owner === 'business' ? 'All business spending' : 'All personal spending'), color: cat?.color ?? '#8a7461', spent, remaining: b.amount - spent, used, status, pace: elapsed > 0 && b.amount > 0 ? used / (elapsed * 100) : null };
     }).sort((a, b) => b.used - a.used);
   }
 

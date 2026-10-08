@@ -1,6 +1,8 @@
 import type { Db } from './db';
 
-const PALETTE = ['#4f7cff', '#22b07d', '#f2a33a', '#e5566b', '#8b5cf6', '#14b8c4', '#ec7a3c', '#6b8e23', '#d946a8', '#64748b'];
+const OLD_PALETTE = ['#4f7cff', '#22b07d', '#f2a33a', '#e5566b', '#8b5cf6', '#14b8c4', '#ec7a3c', '#6b8e23', '#d946a8', '#64748b'];
+// Earth tones that sit with the Azuria espresso/bronze/gold brand while staying distinguishable.
+const PALETTE = ['#c08a3e', '#5f8d5a', '#b4553b', '#7d6aa0', '#3f8a8a', '#d29a5c', '#8c6a43', '#a2484f', '#6f8f3e', '#8a7d6e'];
 
 export const DEFAULT_CATEGORIES: { kind: 'income' | 'expense'; owner: 'personal' | 'business'; names: string[]; tax?: Record<string, string> }[] = [
   { kind: 'expense', owner: 'personal', names: ['Housing', 'Utilities', 'Groceries', 'Restaurants', 'Transportation', 'Gas', 'Travel', 'Entertainment', 'Shopping', 'Clothing', 'Subscriptions', 'Healthcare', 'Insurance', 'Education', 'Pets', 'Gifts', 'Family', 'Personal care', 'Interest & fees', 'Other'] },
@@ -34,13 +36,19 @@ export function seedDefaults(db: Db) {
       owner_draws_as_personal_income: '1',
       date_order: 'MDY',
       auto_lock_minutes: '5',
-      theme: 'system',
+      theme: 'dark',
       notify_bills: '1', notify_debt: '1', notify_invoices: '1', notify_unusual: '1', notify_budget: '1',
       notify_subscriptions: '1', notify_low_balance: '1', notify_goals: '1',
       unusual_expense_multiplier: '3',
       bill_lookahead_days: '14',
     };
     for (const [k, v] of Object.entries(defaults)) db.run('INSERT OR IGNORE INTO settings(key, value) VALUES (?, ?)', [k, v]);
+    // One-time brand update for data created before the Azuria logo palette.
+    if (!db.value("SELECT 1 FROM settings WHERE key = 'brand_v2'")) {
+      OLD_PALETTE.forEach((c, i) => db.run('UPDATE categories SET color = ? WHERE color = ?', [PALETTE[i], c]));
+      db.run("UPDATE settings SET value = 'dark' WHERE key = 'theme' AND value = 'system'");
+      db.run("INSERT INTO settings(key, value) VALUES ('brand_v2', '1')");
+    }
   });
 }
 
