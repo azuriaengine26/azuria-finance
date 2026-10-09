@@ -41,6 +41,7 @@ export function seedDefaults(db: Db) {
       notify_subscriptions: '1', notify_low_balance: '1', notify_goals: '1',
       unusual_expense_multiplier: '3',
       bill_lookahead_days: '14',
+      fx_auto: '1',
     };
     for (const [k, v] of Object.entries(defaults)) db.run('INSERT OR IGNORE INTO settings(key, value) VALUES (?, ?)', [k, v]);
     // One-time brand update for data created before the Azuria logo palette.

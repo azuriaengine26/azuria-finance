@@ -5,6 +5,7 @@ import { saveRate, saveCategory, deleteCategory, restoreTransaction, purgeTransa
 import { exportJSON, restoreJSON, validateBackup, transactionsCSV, deleteDemoData, hasDemoData, TABLES } from '../core/backup';
 import { loadDemoData } from '../core/demo';
 import { Vault, validatePin, KDF_ITERATIONS, WrongPinError } from '../core/vault';
+import { refreshUsdHnl } from '../app/fx';
 import { biometricStatus, enrollBiometric, disableBiometric, biometricErrorMessage, type BiometricStatus } from '../app/biometric';
 import { Db } from '../core/db';
 import { today, formatDate } from '../core/dates';
@@ -61,6 +62,41 @@ function CategoryEditor() {
   );
 }
 
+function WiseRate() {
+  const { db, fin, setting, updateSetting, toast } = useApp();
+  const [busy, setBusy] = useState(false);
+  const current = db.get<{ rate: string; date: string; source: string }>("SELECT rate, date, source FROM exchange_rates WHERE base = 'USD' AND quote = 'HNL' ORDER BY date DESC, id DESC LIMIT 1");
+  const lastOk = setting('fx_last_ok', '');
+  const err = setting('fx_last_error', '');
+  const pending = setting('fx_pending', '');
+  const auto = setting('fx_auto', '1') === '1';
+  const run = async (force = false) => {
+    setBusy(true);
+    try {
+      const r = await refreshUsdHnl(db, { force });
+      toast(r.status === 'updated' ? `Updated: $1 = L${r.rate} (${r.source})` : r.status === 'unchanged' ? `Already up to date: $1 = L${r.rate}` : r.status === 'kept_manual' ? `Kept the rate you entered for today (L${r.rate})` : `Wise returned L${r.rate}, which looks unusual — check it below`);
+    } catch (e: any) { toast({ msg: e.message, tone: 'bad' }); } finally { setBusy(false); }
+  };
+  const sourceLabel = (s?: string) => s === 'wise' ? 'Wise' : s === 'manual' ? 'entered by you' : s === 'demo' ? 'demo — not real' : s ?? '';
+  return (
+    <Panel title="Dollar → lempira rate">
+      <div className="stack">
+        <div className="spread" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div>
+            <div className="fig" style={{ fontSize: 30 }}>{current ? `$1 = L${Number(current.rate).toFixed(4)}` : 'No rate yet'}</div>
+            <div className="small muted">{current ? `${formatDate(current.date, 'long')} · ${sourceLabel(current.source)}` : 'Tap Update now'}{lastOk && current?.source === 'wise' ? ` · checked ${new Date(lastOk).toLocaleString()}` : ''}</div>
+          </div>
+          <button className="btn primary" onClick={() => run(false)} disabled={busy}>{busy ? 'Updating…' : 'Update now'}</button>
+        </div>
+        <Check checked={auto} onChange={(v) => updateSetting('fx_auto', v ? '1' : '0')}>Update automatically every day from Wise (mid-market rate)</Check>
+        {pending && <div className="notice warn"><Icon name="alert" /><div className="stack" style={{ gap: 8 }}><span>{err}</span><div className="row"><button className="btn sm" onClick={() => run(true)} disabled={busy}>Use L{pending} anyway</button><button className="btn sm ghost" onClick={() => { updateSetting('fx_pending', ''); updateSetting('fx_last_error', ''); }}>Keep the current rate</button></div></div></div>}
+        {!pending && err && <div className="notice warn"><Icon name="alert" /><span>{err}</span></div>}
+        <p className="tiny muted">The app asks Wise for today’s public USD→HNL rate once a day. Nothing about you or your finances is sent. Every transaction keeps its original amount and currency; the rate only changes how totals are shown in {fin.base === 'USD' ? 'dollars' : fin.base}. A rate you type below for a day is never overwritten.</p>
+      </div>
+    </Panel>
+  );
+}
+
 function RatesEditor() {
   const { db, fin, act } = useApp();
   const [base, setBase] = useState('USD');
@@ -69,7 +105,8 @@ function RatesEditor() {
   const [date, setDate] = useState(today());
   const rows = db.all<any>('SELECT * FROM exchange_rates ORDER BY date DESC, base, quote LIMIT 30');
   return (
-    <Panel title="Currencies & exchange rates">
+    <><WiseRate />
+    <Panel title="Enter a rate yourself">
       <div className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', alignItems: 'end' }}>
         <Field label="1 unit of"><Select value={base} onChange={(v) => setBase(v ?? 'USD')} options={CURRENCIES.map((c) => ({ value: c.code, label: c.code }))} /></Field>
         <Field label="equals"><input className="input" inputMode="decimal" value={rate} onChange={(e) => setRate(e.target.value.replace(',', '.'))} placeholder={fin.rates['USD>HNL'] ?? '26.20'} /></Field>
@@ -77,10 +114,10 @@ function RatesEditor() {
         <Field label="As of"><DateInput value={date} onChange={setDate} /></Field>
         <button className="btn primary" onClick={() => { if (act(() => saveRate(db, base, quote, rate, date), 'Rate saved') !== undefined) setRate(''); }}>Save rate</button>
       </div>
-      <p className="small muted" style={{ marginTop: 10 }}>Rates are entered by you — the app never goes online to fetch them. The latest rate is used to convert totals; every transaction keeps its original amount and currency. For lempiras, the Banco Central de Honduras publishes a daily reference rate.</p>
+      <p className="small muted" style={{ marginTop: 10 }}>For other currencies, or to use your bank’s rate for a particular day. The most recent rate is used to convert totals.</p>
       <div className="tbl-wrap" style={{ marginTop: 12 }}><table className="tbl"><thead><tr><th>Date</th><th>Rate</th><th>Source</th><th /></tr></thead>
-        <tbody>{rows.map((r) => <tr key={r.id}><td>{formatDate(r.date)}</td><td className="num">1 {r.base} = {r.rate} {r.quote}</td><td>{r.source === 'demo' ? <Chip kind="demo">Demo — replace</Chip> : r.source}</td><td className="r"><button className="btn ghost sm danger" onClick={() => act(() => db.run('DELETE FROM exchange_rates WHERE id = ?', [r.id]), 'Rate removed')}>Remove</button></td></tr>)}</tbody></table></div>
-    </Panel>
+        <tbody>{rows.map((r) => <tr key={r.id}><td>{formatDate(r.date)}</td><td className="num">1 {r.base} = {r.rate} {r.quote}</td><td>{r.source === 'demo' ? <Chip kind="demo">Demo — replace</Chip> : r.source === 'wise' ? 'Wise' : r.source === 'manual' ? 'You' : r.source}</td><td className="r"><button className="btn ghost sm danger" onClick={() => act(() => db.run('DELETE FROM exchange_rates WHERE id = ?', [r.id]), 'Rate removed')}>Remove</button></td></tr>)}</tbody></table></div>
+    </Panel></>
   );
 }
 
@@ -125,7 +162,7 @@ function Security() {
   return (
     <Panel title="Security">
       <div className="stack">
-        <div className="notice"><Icon name="lock" /><span>All data — including receipts — is stored encrypted on this device with AES-256-GCM. The key comes from your PIN through PBKDF2-SHA256 ({KDF_ITERATIONS.toLocaleString()} rounds) and exists only in memory while unlocked. Nothing is sent to any server, and there is no PIN recovery.</span></div>
+        <div className="notice"><Icon name="lock" /><span>All data — including receipts — is stored encrypted on this device with AES-256-GCM. The key comes from your PIN through PBKDF2-SHA256 ({KDF_ITERATIONS.toLocaleString()} rounds) and exists only in memory while unlocked. Your data is never sent to any server (the only download is the public daily exchange rate), and there is no PIN recovery.</span></div>
         <Field label="Lock automatically after"><Select value={setting('auto_lock_minutes', '5')} onChange={(v) => updateSetting('auto_lock_minutes', v ?? '5')} options={[['1', '1 minute'], ['2', '2 minutes'], ['5', '5 minutes'], ['15', '15 minutes'], ['30', '30 minutes'], ['0', 'Never (not recommended)']].map(([v, l]) => ({ value: v, label: l }))} /></Field>
         <div className="row wrap"><button className="btn" onClick={() => setShow(true)}>Change PIN</button><button className="btn" onClick={() => lock()}><Icon name="lock" />Lock now</button></div>
         <div className="panel" style={{ background: 'var(--surface-2)' }}>

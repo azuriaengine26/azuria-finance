@@ -2,7 +2,7 @@
 // The app is served from inside the app bundle over a private app:// scheme. Nothing is loaded from
 // the internet, no Node.js access is given to the page, and data stays encrypted in the user's
 // Library/Application Support folder.
-const { app, BrowserWindow, protocol, net, shell, session, Menu } = require('electron');
+const { app, BrowserWindow, protocol, net, shell, session, Menu, ipcMain } = require('electron');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 
@@ -34,6 +34,7 @@ function createWindow() {
       sandbox: true,
       webSecurity: true,
       spellcheck: true,
+      preload: path.join(__dirname, 'preload.cjs'),
     },
   });
   win.once('ready-to-show', () => win.show());
@@ -96,6 +97,27 @@ app.whenReady().then(() => {
   session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
     const u = details.url;
     callback({ cancel: !(u.startsWith('app:') || u.startsWith('data:') || u.startsWith('blob:') || u.startsWith('devtools:') || u.startsWith('chrome-extension:')) });
+  });
+
+  // The page never talks to the internet itself. For the daily exchange rate it asks this process,
+  // which only fetches these exact public addresses, from a separate session with no cookies.
+  const RATE_URLS = new Set([
+    'https://wise.com/rates/live?source=USD&target=HNL',
+    'https://wise.com/gb/currency-converter/usd-to-hnl-rate',
+    'https://wise.com/es/currency-converter/usd-to-hnl-rate',
+    'https://raw.githubusercontent.com/azuriaengine26/azuria-finance/rates/usd-hnl.json',
+  ]);
+  const rateSession = session.fromPartition('azuria-rates');
+  ipcMain.handle('az-fetch-rate', async (_e, url) => {
+    if (!RATE_URLS.has(url)) throw new Error('Address not allowed');
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 15000);
+    try {
+      const res = await rateSession.fetch(url, { signal: ctrl.signal, headers: { Accept: 'application/json, text/html' } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      return text.slice(0, 3_000_000);
+    } finally { clearTimeout(timer); }
   });
 
   const isMac = process.platform === 'darwin';

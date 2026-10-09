@@ -22,6 +22,7 @@ mkdirSync(stage, { recursive: true });
 cpSync(path.join(root, 'dist'), path.join(stage, 'dist'), { recursive: true });
 rmSync(path.join(stage, 'dist/sw.js'), { force: true });
 cpSync(path.join(root, 'electron/main.cjs'), path.join(stage, 'main.cjs'));
+cpSync(path.join(root, 'electron/preload.cjs'), path.join(stage, 'preload.cjs'));
 writeFileSync(path.join(stage, 'package.json'), JSON.stringify({ name: 'azuria-finance', productName: 'Azuria Finance', version: pkg.version, main: 'main.cjs', private: true }, null, 2));
 
 console.log('3/4 Packaging for macOS (Apple Silicon + Intel)…');

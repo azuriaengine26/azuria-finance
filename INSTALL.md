@@ -26,7 +26,7 @@ Each device keeps its own encrypted copy of your data. To move data between devi
 xattr -cr "/Applications/Azuria Finance.app"
 ```
 
-Why the extra step: Apple only skips it for apps signed with a paid Apple Developer certificate ($99/year) and notarized by Apple. The app is safe to allow — it never connects to the internet. If you get an Apple Developer account later, the build script signs and notarizes automatically (see README).
+Why the extra step: Apple only skips it for apps signed with a paid Apple Developer certificate ($99/year) and notarized by Apple. The app is safe to allow — the only thing it ever downloads is the daily public USD→HNL rate from Wise; your data never leaves the Mac. If you get an Apple Developer account later, the build script signs and notarizes automatically (see README).
 
 ---
 
@@ -73,7 +73,7 @@ Open **azuriaengine26.github.io/azuria-finance** in Safari on the Mac → **File
 
 ## First steps after installing
 
-1. **Settings → Currencies:** enter today's USD→HNL rate (the demo rate is only an example).
+1. **Settings → Currencies:** the USD→HNL rate updates itself daily from Wise. Tap **Update now** once to replace the demo rate straight away.
 2. **Settings → Data → Delete all demo data.**
 3. **Accounts → Add account** for each real account, with its balance from your bank statement.
 4. **Import** your bank statements (CSV, Excel or OFX/QFX) or add transactions by hand.

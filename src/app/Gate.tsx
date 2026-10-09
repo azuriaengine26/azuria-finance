@@ -155,7 +155,7 @@ export function Onboarding({ onUnlock }: { onUnlock: (u: Unlocked) => void }) {
           <p>Track personal and Azuria business money separately, with a combined picture whenever you want it.</p>
           <ul style={{ color: 'var(--gate-ink)', paddingLeft: 18, margin: 0, lineHeight: 1.7 }}>
             <li>Your data stays on this device, encrypted with a PIN only you know.</li>
-            <li>Nothing is sent to any server. No bank passwords are ever asked for.</li>
+            <li>Your finances are never sent anywhere. The app only downloads the public dollar→lempira rate each day. No bank passwords are ever asked for.</li>
             <li>Import bank statements (CSV, Excel, OFX) whenever you like.</li>
           </ul>
           {import.meta.env.MODE === 'single' && <p style={{ fontSize: 13.5, border: '1px solid var(--gate-line)', borderRadius: 10, padding: '10px 12px' }}>Viewing this inside Claude? This is a live preview. Exports and backups ask you to confirm before saving. For everyday use, install the Mac app or add the app to your iPhone Home Screen.</p>}

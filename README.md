@@ -64,11 +64,20 @@ npm run build:single # whole app in ONE file -> dist-single/index.html
 
 The app needs a secure context for encryption: `https://…` or `http://localhost`.
 
+## Daily exchange rate (Wise)
+
+The USD→HNL rate updates itself once a day from Wise's mid-market rate (Settings → Currencies → *Update automatically every day*, on by default):
+- **Android:** native request straight to Wise. **Mac:** the desktop shell fetches it (only that exact address; the app window itself still has no network access).
+- **Web / iPhone Home Screen:** browsers can't read Wise directly, so the app reads `rates/usd-hnl.json` on the `rates` branch, published twice a day by `.github/workflows/rates.yml` (also the fallback on Android/Mac).
+- Safety: a rate more than 15% away from the last real rate is held for you to confirm; a rate you entered yourself for a day is never overwritten; if Wise can't be reached, the last rate keeps being used and Settings says so.
+- Only the public rate is requested. No personal or financial data is sent anywhere.
+- Note: GitHub pauses scheduled jobs in public repositories after 60 days without any commits. If the web version's rate stops updating, run *Daily exchange rate* once from the Actions tab.
+
 ## Downloadable Mac app
 
 `npm run build:mac` builds **Azuria Finance.app** for Apple Silicon and Intel (Electron), signs it, and zips it into `release/`.
 The desktop shell (`electron/main.cjs`) serves the app from inside the bundle over a private `app://` scheme, gives the page no
-Node.js access, blocks every outbound network request, refuses camera/microphone/location, opens normal save dialogs for exports,
+Node.js access, blocks every outbound network request from the app window (the shell itself fetches only the daily Wise rate), refuses camera/microphone/location, opens normal save dialogs for exports,
 and waits for the final encrypted save before quitting. Data lives in `~/Library/Application Support/Azuria Finance`.
 
 Signing: built on Linux it is ad-hoc signed with `rcodesign`; built on a Mac it uses `codesign` (set `APPLE_SIGN_IDENTITY` to a
@@ -131,7 +140,7 @@ On first launch you can start with a year of clearly-labelled demo data. Remove 
 
 ## Security model — what's real, and what isn't (yet)
 
-Real: AES-256-GCM encryption at rest of all data and attachments; PBKDF2-SHA256 600,000-iteration key derivation; key kept only in memory while unlocked; auto-lock (default 5 min, including in background); attempt slowdown after 5 wrong PINs; Content-Security-Policy that blocks connections to any other website; no third parties; formula-injection-safe CSV export.
+Real: AES-256-GCM encryption at rest of all data and attachments; PBKDF2-SHA256 600,000-iteration key derivation; key kept only in memory while unlocked; auto-lock (default 5 min, including in background); attempt slowdown after 5 wrong PINs; Content-Security-Policy that blocks connections to any other website (only the two exchange-rate addresses are allowed); no third parties; formula-injection-safe CSV export.
 
 Honest limitations of v1:
 * **Face ID / Touch ID** is not implemented. A web app can't securely tie a local encryption key to Face ID, and I didn't want to fake it with a "Face ID screen" that doesn't protect anything. In the native build this is the next step (Keychain item protected by biometrics holding the vault key).

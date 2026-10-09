@@ -1,0 +1,34 @@
+name: Daily exchange rate
+
+# Every morning, fetch the USD→HNL mid-market rate from Wise and publish it to the "rates" branch
+# (rates/usd-hnl.json). The app reads this copy when it can't reach Wise directly
+# (iPhone/web always; Android and Mac as a fallback).
+on:
+  schedule:
+    - cron: '7 12 * * *'   # 06:07 in Honduras
+    - cron: '7 0 * * *'    # 18:07 in Honduras
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Fetch rate from Wise
+        run: node --experimental-strip-types --no-warnings scripts/fetch-rate.mts > usd-hnl.json && cat usd-hnl.json
+      - name: Publish to the rates branch
+        run: |
+          mkdir publish && cp usd-hnl.json publish/
+          cd publish
+          git init -q -b rates
+          git config user.name "azuria-rates-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add usd-hnl.json
+          git commit -q -m "USD→HNL rate $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -f -q "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" rates

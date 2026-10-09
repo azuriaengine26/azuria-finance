@@ -7,6 +7,7 @@ import { getSetting, setSetting } from '../core/seed';
 import { generateRecurring } from '../core/repo';
 import { today } from '../core/dates';
 import { setSystemBarsForTheme } from './native';
+import { autoRefreshUsdHnl } from './fx';
 
 export interface Toast { msg: string; tone?: 'ok' | 'bad'; action?: { label: string; run: () => void } }
 
@@ -93,6 +94,7 @@ export function AppProvider({ db, vault, onLock, children }: { db: Db; vault: Va
       if (m > 0 && Date.now() - last > m * 60_000) lock();
       const d = today();
       if (d !== day) { setDay(d); generateRecurring(db); }
+      autoRefreshUsdHnl(db);
     };
     const onVis = () => { if (document.visibilityState === 'visible') check(); };
     const ev = ['pointerdown', 'keydown', 'wheel', 'touchstart'];
@@ -124,6 +126,9 @@ export function AppProvider({ db, vault, onLock, children }: { db: Db; vault: Va
     else document.documentElement.setAttribute('data-theme', t);
     setSystemBarsForTheme(t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches));
   }, [db, version]);
+
+  // Daily USD→HNL rate from Wise: once when the app opens, then re-checked by the timer above.
+  useEffect(() => { autoRefreshUsdHnl(db); }, [db]);
 
   const fin = useMemo(() => new Finance(db, day), [db, version, day]);
 
