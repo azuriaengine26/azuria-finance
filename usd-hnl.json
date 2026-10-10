@@ -1,0 +1,9 @@
+{
+  "base": "USD",
+  "quote": "HNL",
+  "rate": "26.9078",
+  "source": "wise",
+  "method": "json",
+  "fetched_at": "2026-10-10T12:23:49.336Z",
+  "url": "https://wise.com/rates/live?source=USD&target=HNL"
+}
